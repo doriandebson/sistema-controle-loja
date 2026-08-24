@@ -7,30 +7,29 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Servir arquivos estáticos (CSS, JS, imagens) SEM bloqueio para não quebrar o layout
+// Servir arquivos estáticos (CSS, JS, imagens)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Credenciais de Acesso ao Sistema
+// Credenciais de Acesso
 const USER_AUTH = 'admin';
 const PASS_AUTH = 'senha123';
 
-// Rota de Login para validar credenciais no Frontend
+// Rota de Autenticação (Login)
 app.post('/api/login', (req, res) => {
     const { usuario, senha } = req.body;
     if (usuario === USER_AUTH && senha === PASS_AUTH) {
-        res.json({ success: true, message: 'Autenticado com sucesso!' });
-    } else {
-        res.status(401).json({ success: false, message: 'Usuário ou senha inválidos.' });
+        return res.json({ success: true, message: 'Autenticado com sucesso!' });
     }
+    return res.status(401).json({ success: false, message: 'Usuário ou senha inválidos.' });
 });
 
-// Conexão com o Banco de Dados
+// Banco de Dados SQLite
 const db = new sqlite3.Database('./loja.db', (err) => {
     if (err) console.error('Erro ao abrir banco:', err.message);
     else console.log('Conectado ao SQLite.');
 });
 
-// Criar Tabelas
+// Estrutura do Banco de Dados
 db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS clientes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,11 +87,12 @@ db.serialize(() => {
         FOREIGN KEY(produto_id) REFERENCES produtos(id)
     )`);
 
-    db.run(`ALTER TABLE contas ADD COLUMN forma_pagamento TEXT`, (err) => {});
+    db.run(`ALTER TABLE contas ADD COLUMN forma_pagamento TEXT`, () => {});
 });
 
 // --- ROTAS DA API ---
 
+// Clientes
 app.get('/api/clientes', (req, res) => {
     db.all("SELECT * FROM clientes", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -111,6 +111,7 @@ app.post('/api/clientes', (req, res) => {
     );
 });
 
+// Fornecedores
 app.get('/api/fornecedores', (req, res) => {
     db.all("SELECT * FROM fornecedores", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -129,6 +130,7 @@ app.post('/api/fornecedores', (req, res) => {
     );
 });
 
+// Produtos
 app.get('/api/produtos', (req, res) => {
     db.all("SELECT * FROM produtos", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -147,6 +149,7 @@ app.post('/api/produtos', (req, res) => {
     );
 });
 
+// Contas
 app.get('/api/contas', (req, res) => {
     db.all("SELECT * FROM contas", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -165,6 +168,16 @@ app.post('/api/contas', (req, res) => {
     );
 });
 
+// Atualizar Status da Conta (Paga/Pendente)
+app.patch('/api/contas/:id', (req, res) => {
+    const { status } = req.body;
+    db.run("UPDATE contas SET status = ? WHERE id = ?", [status, req.params.id], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ updated: this.changes });
+    });
+});
+
+// Vendas
 app.post('/api/vendas', (req, res) => {
     const { cliente_id, itens, forma_pagamento, status_pagamento } = req.body;
     let valor_total = itens.reduce((sum, item) => sum + (item.quantidade * item.preco_unitario), 0);
@@ -192,6 +205,7 @@ app.post('/api/vendas', (req, res) => {
     );
 });
 
+// Relatório de Estoque
 app.get('/api/relatorios/estoque', (req, res) => {
     db.all("SELECT id, nome, estoque_atual, preco_venda FROM produtos", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
