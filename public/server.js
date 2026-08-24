@@ -12,7 +12,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Credenciais de Acesso Padrão
 const USER_AUTH = 'admin';
-const PASS_AUTH = 'senha123';
+const PASS_AUTH = '123456';
 
 // Rota de Autenticação (Login com sanitização de texto)
 app.post('/api/login', (req, res) => {
