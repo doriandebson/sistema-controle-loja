@@ -1,70 +1,486 @@
-<!-- EMISSÃO DE VENDA E RELATÓRIO DE ESTOQUE -->
-<section id="sec-vendas" class="section-panel">
-    <div class="page-header">
-        <h2>Emissão de Venda & Relatório de Estoque</h2>
-        <p>Registre vendas com forma de pagamento, quitação e atualização de estoque.</p>
-    </div>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Loja</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { display: flex; background-color: #f4f6f9; min-height: 100vh; color: #333; }
+        
+        /* Modal / Tela de Login */
+        #login-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .login-card { background: #fff; padding: 30px; border-radius: 8px; width: 100%; max-width: 360px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .login-card h2 { margin-bottom: 20px; color: #1a2a52; text-align: center; }
 
-    <div class="card">
-        <h3 class="card-title">Emitir Venda</h3>
-        <form id="formVenda" onsubmit="emitirVenda(event)">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="venda_cliente">Cliente</label>
-                    <select id="venda_cliente" required>
-                        <option value="">Selecione o cliente...</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="venda_produto">Produto</label>
-                    <select id="venda_produto" required onchange="atualizarPrecoProduto()">
-                        <option value="">Selecione o produto...</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="venda_qtd">Quantidade *</label>
-                    <input type="number" id="venda_qtd" min="1" value="1" required>
-                </div>
-                <div class="form-group">
-                    <label for="venda_preco">Preço Unitário (R$) *</label>
-                    <input type="number" step="0.01" id="venda_preco" required>
-                </div>
-                <div class="form-group">
-                    <label for="venda_pagamento">Forma de Pagamento *</label>
-                    <select id="venda_pagamento" required>
-                        <option value="Pix">Pix</option>
-                        <option value="Dinheiro">Dinheiro</option>
-                        <option value="Cartão de Crédito">Cartão de Crédito</option>
-                        <option value="Cartão de Débito">Cartão de Débito</option>
-                        <option value="Boleto">Boleto</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="venda_status">Status do Pagamento *</label>
-                    <select id="venda_status" required>
-                        <option value="PAGO">Pago (Quitado)</option>
-                        <option value="PENDENTE">Pendente (A Receber)</option>
-                    </select>
-                </div>
-            </div>
-            <button type="submit" class="btn btn-secondary">Finalizar Venda</button>
-        </form>
-    </div>
+        /* Sidebar Navegação */
+        #sidebar { width: 250px; background-color: #1a2a52; color: #fff; padding: 20px 0; display: flex; flex-direction: column; flex-shrink: 0; }
+        #sidebar h1 { font-size: 1.3rem; padding: 0 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        #sidebar nav { margin-top: 20px; flex-grow: 1; }
+        #sidebar nav button { display: block; width: 100%; text-align: left; padding: 12px 20px; background: none; border: none; color: #cfd8dc; font-size: 0.95rem; cursor: pointer; transition: 0.2s; }
+        #sidebar nav button:hover, #sidebar nav button.active { background-color: #2c3e6b; color: #fff; font-weight: bold; }
+        .btn-logout { background: #c0392b !important; color: white !important; text-align: center !important; margin: 20px; border-radius: 4px; }
 
-    <div class="card">
-        <h3 class="card-title">Relatório de Posição de Estoque</h3>
-        <div class="table-responsive">
-            <table id="tblEstoque">
-                <thead>
-                    <tr>
-                        <th>Código</th>
-                        <th>Produto</th>
-                        <th>Estoque Atual</th>
-                        <th>Preço Venda</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+        /* Conteúdo Principal */
+        #main-content { flex-grow: 1; padding: 30px; overflow-y: auto; }
+        .section-panel { display: none; }
+        .section-panel.active { display: block; }
+        .page-header { margin-bottom: 25px; }
+        .page-header h2 { font-size: 1.5rem; color: #1a2a52; }
+        .page-header p { color: #666; font-size: 0.9rem; margin-top: 4px; }
+
+        /* Cards e Formulários */
+        .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card-title { font-size: 1.1rem; margin-bottom: 15px; color: #1a2a52; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: #444; }
+        .form-group input, .form-group select { padding: 9px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+        .form-group input:focus, .form-group select:focus { border-color: #1a2a52; outline: none; }
+
+        /* Botões e Tabelas */
+        .btn { padding: 9px 18px; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; background: #1a2a52; color: #fff; }
+        .btn:hover { background: #2c3e6b; }
+        .table-responsive { overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
+        table th, table td { padding: 12px; border-bottom: 1px solid #eee; }
+        table th { background-color: #f8f9fa; color: #555; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .badge-pago { background: #d4edda; color: #155724; }
+        .badge-pendente { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+
+    <!-- Modal de Login -->
+    <div id="login-modal">
+        <div class="login-card">
+            <h2>Acesso ao Sistema</h2>
+            <form id="formLogin" onsubmit="fazerLogin(event)">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Usuário</label>
+                    <input type="text" id="login_usuario" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>Senha</label>
+                    <input type="password" id="login_senha" required>
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Entrar</button>
+            </form>
         </div>
     </div>
-</section>
+
+    <!-- Menu Lateral -->
+    <aside id="sidebar">
+        <h1>Controle de Loja</h1>
+        <nav>
+            <button class="nav-btn active" onclick="navegarPara('clientes')">👥 Clientes</button>
+            <button class="nav-btn" onclick="navegarPara('fornecedores')">🏢 Fornecedores</button>
+            <button class="nav-btn" onclick="navegarPara('produtos')">📦 Produtos</button>
+            <button class="nav-btn" onclick="navegarPara('contas')">💰 Contas Pagar / Receber</button>
+            <button class="nav-btn" onclick="navegarPara('vendas')">🛒 Vendas & Estoque</button>
+        </nav>
+        <button class="btn-logout" onclick="fazerLogout()">Sair</button>
+    </aside>
+
+    <!-- Conteúdo Das Seções -->
+    <main id="main-content">
+        <!-- CLIENTES -->
+        <section id="sec-clientes" class="section-panel active">
+            <div class="page-header">
+                <h2>Gerenciamento de Clientes</h2>
+                <p>Cadastre e visualize a lista de clientes.</p>
+            </div>
+            <div class="card">
+                <h3 class="card-title">Novo Cliente</h3>
+                <form id="formCliente" onsubmit="cadastrarCliente(event)">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Nome *</label><input type="text" id="cli_nome" required></div>
+                        <div class="form-group"><label>CPF / CNPJ</label><input type="text" id="cli_cpf"></div>
+                        <div class="form-group"><label>Telefone</label><input type="text" id="cli_telefone"></div>
+                        <div class="form-group"><label>E-mail</label><input type="email" id="cli_email"></div>
+                    </div>
+                    <button type="submit" class="btn">Cadastrar Cliente</button>
+                </form>
+            </div>
+            <div class="card">
+                <h3 class="card-title">Clientes Cadastrados</h3>
+                <div class="table-responsive">
+                    <table id="tblClientes">
+                        <thead><tr><th>ID</th><th>Nome</th><th>CPF/CNPJ</th><th>Telefone</th><th>E-mail</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- FORNECEDORES -->
+        <section id="sec-fornecedores" class="section-panel">
+            <div class="page-header">
+                <h2>Gerenciamento de Fornecedores</h2>
+                <p>Cadastre e visualize fornecedores parceiros.</p>
+            </div>
+            <div class="card">
+                <h3 class="card-title">Novo Fornecedor</h3>
+                <form id="formFornecedor" onsubmit="cadastrarFornecedor(event)">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Nome Fantasia *</label><input type="text" id="for_nome" required></div>
+                        <div class="form-group"><label>CNPJ *</label><input type="text" id="for_cnpj" required></div>
+                        <div class="form-group"><label>Telefone</label><input type="text" id="for_telefone"></div>
+                        <div class="form-group"><label>E-mail</label><input type="email" id="for_email"></div>
+                    </div>
+                    <button type="submit" class="btn">Cadastrar Fornecedor</button>
+                </form>
+            </div>
+            <div class="card">
+                <h3 class="card-title">Fornecedores Cadastrados</h3>
+                <div class="table-responsive">
+                    <table id="tblFornecedores">
+                        <thead><tr><th>ID</th><th>Nome Fantasia</th><th>CNPJ</th><th>Telefone</th><th>E-mail</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- PRODUTOS -->
+        <section id="sec-produtos" class="section-panel">
+            <div class="page-header">
+                <h2>Gerenciamento de Produtos</h2>
+                <p>Cadastro de itens, preços e vínculo com fornecedores.</p>
+            </div>
+            <div class="card">
+                <h3 class="card-title">Novo Produto</h3>
+                <form id="formProduto" onsubmit="cadastrarProduto(event)">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Nome do Produto *</label><input type="text" id="prod_nome" required></div>
+                        <div class="form-group"><label>Preço de Custo (R$) *</label><input type="number" step="0.01" id="prod_custo" required></div>
+                        <div class="form-group"><label>Preço de Venda (R$) *</label><input type="number" step="0.01" id="prod_venda" required></div>
+                        <div class="form-group"><label>Estoque Inicial *</label><input type="number" id="prod_estoque" value="0" required></div>
+                        <div class="form-group">
+                            <label>Fornecedor</label>
+                            <select id="prod_fornecedor"><option value="">Selecione...</option></select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">Cadastrar Produto</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- CONTAS PAGAR / RECEBER -->
+        <section id="sec-contas" class="section-panel">
+            <div class="page-header">
+                <h2>Contas a Pagar e Receber</h2>
+                <p>Lançamento manual de títulos financeiros, despesas e receitas.</p>
+            </div>
+            <div class="card">
+                <h3 class="card-title">Lançamento de Conta</h3>
+                <form id="formConta" onsubmit="cadastrarConta(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Tipo de Conta *</label>
+                            <select id="conta_tipo" required>
+                                <option value="PAGAR">A Pagar (Despesa)</option>
+                                <option value="RECEBER">A Receber (Receita)</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Descrição *</label><input type="text" id="conta_desc" required></div>
+                        <div class="form-group"><label>Valor (R$) *</label><input type="number" step="0.01" id="conta_valor" required></div>
+                        <div class="form-group"><label>Data de Vencimento *</label><input type="date" id="conta_vencimento" required></div>
+                        <div class="form-group">
+                            <label>Status *</label>
+                            <select id="conta_status" required>
+                                <option value="PENDENTE">Pendente</option>
+                                <option value="PAGO">Pago</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">Lançar Conta</button>
+                </form>
+            </div>
+            <div class="card">
+                <h3 class="card-title">Listagem de Contas</h3>
+                <div class="table-responsive">
+                    <table id="tblContas">
+                        <thead><tr><th>ID</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- VENDAS E ESTOQUE -->
+        <section id="sec-vendas" class="section-panel">
+            <div class="page-header">
+                <h2>Emissão de Venda & Relatório de Estoque</h2>
+                <p>Registre vendas com forma de pagamento, quitação e atualização de estoque.</p>
+            </div>
+            <div class="card">
+                <h3 class="card-title">Emitir Venda</h3>
+                <form id="formVenda" onsubmit="emitirVenda(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Cliente</label>
+                            <select id="venda_cliente" required><option value="">Selecione...</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Produto</label>
+                            <select id="venda_produto" required onchange="atualizarPrecoProduto()"><option value="">Selecione...</option></select>
+                        </div>
+                        <div class="form-group"><label>Quantidade *</label><input type="number" id="venda_qtd" min="1" value="1" required></div>
+                        <div class="form-group"><label>Preço Unitário (R$) *</label><input type="number" step="0.01" id="venda_preco" required></div>
+                        <div class="form-group">
+                            <label>Forma de Pagamento *</label>
+                            <select id="venda_pagamento" required>
+                                <option value="Pix">Pix</option>
+                                <option value="Dinheiro">Dinheiro</option>
+                                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                                <option value="Cartão de Débito">Cartão de Débito</option>
+                                <option value="Boleto">Boleto</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Status do Pagamento *</label>
+                            <select id="venda_status" required>
+                                <option value="PAGO">Pago (Quitado)</option>
+                                <option value="PENDENTE">Pendente (A Receber)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">Finalizar Venda</button>
+                </form>
+            </div>
+            <div class="card">
+                <h3 class="card-title">Relatório de Posição de Estoque</h3>
+                <div class="table-responsive">
+                    <table id="tblEstoque">
+                        <thead><tr><th>Código</th><th>Produto</th><th>Estoque Atual</th><th>Preço Venda</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = '/api';
+        let listaProdutosCache = [];
+
+        // Verificar Autenticação Inicial
+        window.onload = () => {
+            if (localStorage.getItem('autenticado') === 'true') {
+                document.getElementById('login-modal').style.display = 'none';
+                carregarDadosIniciais();
+            }
+        };
+
+        async function fazerLogin(e) {
+            e.preventDefault();
+            const usuario = document.getElementById('login_usuario').value;
+            const senha = document.getElementById('login_senha').value;
+
+            const res = await fetch(`${API_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario, senha })
+            });
+
+            if (res.ok) {
+                localStorage.setItem('autenticado', 'true');
+                document.getElementById('login-modal').style.display = 'none';
+                carregarDadosIniciais();
+            } else {
+                alert('Usuário ou senha incorretos.');
+            }
+        }
+
+        function fazerLogout() {
+            localStorage.removeItem('autenticado');
+            location.reload();
+        }
+
+        function navegarPara(secao) {
+            document.querySelectorAll('.section-panel').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(`sec-${secao}`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function carregarDadosIniciais() {
+            carregarClientes();
+            carregarFornecedores();
+            carregarContas();
+            carregarSelectProdutos();
+            carregarRelatorioEstoque();
+        }
+
+        async function carregarClientes() {
+            const res = await fetch(`${API_URL}/clientes`);
+            const dados = await res.json();
+            const tbody = document.querySelector('#tblClientes tbody');
+            const selectVenda = document.getElementById('venda_cliente');
+            
+            tbody.innerHTML = '';
+            selectVenda.innerHTML = '<option value="">Selecione...</option>';
+            
+            dados.forEach(c => {
+                tbody.innerHTML += `<tr><td>${c.id}</td><td>${c.nome}</td><td>${c.cpf_cnpj || '-'}</td><td>${c.telefone || '-'}</td><td>${c.email || '-'}</td></tr>`;
+                selectVenda.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
+            });
+        }
+
+        async function cadastrarCliente(e) {
+            e.preventDefault();
+            const payload = {
+                nome: document.getElementById('cli_nome').value,
+                cpf_cnpj: document.getElementById('cli_cpf').value,
+                telefone: document.getElementById('cli_telefone').value,
+                email: document.getElementById('cli_email').value
+            };
+            await fetch(`${API_URL}/clientes`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            document.getElementById('formCliente').reset();
+            carregarClientes();
+        }
+
+        async function carregarFornecedores() {
+            const res = await fetch(`${API_URL}/fornecedores`);
+            const dados = await res.json();
+            const tbody = document.querySelector('#tblFornecedores tbody');
+            const selectProd = document.getElementById('prod_fornecedor');
+            
+            tbody.innerHTML = '';
+            selectProd.innerHTML = '<option value="">Selecione...</option>';
+            
+            dados.forEach(f => {
+                tbody.innerHTML += `<tr><td>${f.id}</td><td>${f.nome_fantasia}</td><td>${f.cnpj}</td><td>${f.telefone || '-'}</td><td>${f.email || '-'}</td></tr>`;
+                selectProd.innerHTML += `<option value="${f.id}">${f.nome_fantasia}</option>`;
+            });
+        }
+
+        async function cadastrarFornecedor(e) {
+            e.preventDefault();
+            const payload = {
+                nome_fantasia: document.getElementById('for_nome').value,
+                cnpj: document.getElementById('for_cnpj').value,
+                telefone: document.getElementById('for_telefone').value,
+                email: document.getElementById('for_email').value
+            };
+            await fetch(`${API_URL}/fornecedores`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            document.getElementById('formFornecedor').reset();
+            carregarFornecedores();
+        }
+
+        async function cadastrarProduto(e) {
+            e.preventDefault();
+            const payload = {
+                nome: document.getElementById('prod_nome').value,
+                preco_custo: parseFloat(document.getElementById('prod_custo').value),
+                preco_venda: parseFloat(document.getElementById('prod_venda').value),
+                estoque_atual: parseInt(document.getElementById('prod_estoque').value),
+                fornecedor_id: document.getElementById('prod_fornecedor').value || null
+            };
+            await fetch(`${API_URL}/produtos`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            document.getElementById('formProduto').reset();
+            carregarSelectProdutos();
+            carregarRelatorioEstoque();
+        }
+
+        async function carregarContas() {
+            const res = await fetch(`${API_URL}/contas`);
+            const dados = await res.json();
+            const tbody = document.querySelector('#tblContas tbody');
+            tbody.innerHTML = '';
+            
+            dados.forEach(c => {
+                const badgeClass = c.status === 'PAGO' ? 'badge-pago' : 'badge-pendente';
+                tbody.innerHTML += `<tr>
+                    <td>${c.id}</td>
+                    <td><strong>${c.tipo}</strong></td>
+                    <td>${c.descricao}</td>
+                    <td>R$ ${parseFloat(c.valor).toFixed(2)}</td>
+                    <td>${c.data_vencimento}</td>
+                    <td><span class="badge ${badgeClass}">${c.status}</span></td>
+                </tr>`;
+            });
+        }
+
+        async function cadastrarConta(e) {
+            e.preventDefault();
+            const payload = {
+                tipo: document.getElementById('conta_tipo').value,
+                descricao: document.getElementById('conta_desc').value,
+                valor: parseFloat(document.getElementById('conta_valor').value),
+                data_vencimento: document.getElementById('conta_vencimento').value,
+                status: document.getElementById('conta_status').value
+            };
+            await fetch(`${API_URL}/contas`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            document.getElementById('formConta').reset();
+            carregarContas();
+        }
+
+        async function carregarSelectProdutos() {
+            const res = await fetch(`${API_URL}/produtos`);
+            listaProdutosCache = await res.json();
+            const selectVenda = document.getElementById('venda_produto');
+            selectVenda.innerHTML = '<option value="">Selecione...</option>';
+            listaProdutosCache.forEach(p => {
+                selectVenda.innerHTML += `<option value="${p.id}">${p.nome} (R$ ${p.preco_venda.toFixed(2)})</option>`;
+            });
+        }
+
+        function atualizarPrecoProduto() {
+            const prodId = document.getElementById('venda_produto').value;
+            const prod = listaProdutosCache.find(p => p.id == prodId);
+            if (prod) {
+                document.getElementById('venda_preco').value = prod.preco_venda;
+            }
+        }
+
+        async function emitirVenda(e) {
+            e.preventDefault();
+            const payload = {
+                cliente_id: parseInt(document.getElementById('venda_cliente').value),
+                forma_pagamento: document.getElementById('venda_pagamento').value,
+                status_pagamento: document.getElementById('venda_status').value,
+                itens: [{
+                    produto_id: parseInt(document.getElementById('venda_produto').value),
+                    quantidade: parseInt(document.getElementById('venda_qtd').value),
+                    preco_unitario: parseFloat(document.getElementById('venda_preco').value)
+                }]
+            };
+
+            const res = await fetch(`${API_URL}/vendas`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert('Venda emitida com sucesso!');
+                document.getElementById('formVenda').reset();
+                carregarSelectProdutos();
+                carregarRelatorioEstoque();
+                carregarContas();
+            } else {
+                alert('Erro ao emitir venda.');
+            }
+        }
+
+        async function carregarRelatorioEstoque() {
+            const res = await fetch(`${API_URL}/relatorios/estoque`);
+            const dados = await res.json();
+            const tbody = document.querySelector('#tblEstoque tbody');
+            tbody.innerHTML = '';
+            dados.forEach(p => {
+                tbody.innerHTML += `<tr>
+                    <td>${p.id}</td>
+                    <td>${p.nome}</td>
+                    <td><strong>${p.estoque_atual}</strong></td>
+                    <td>R$ ${parseFloat(p.preco_venda).toFixed(2)}</td>
+                </tr>`;
+            });
+        }
+    </script>
+</body>
+</html>
