@@ -10,13 +10,15 @@ app.use(cors());
 // Servir arquivos estáticos (CSS, JS, imagens)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Credenciais de Acesso
+// Credenciais de Acesso Padrão
 const USER_AUTH = 'admin';
 const PASS_AUTH = 'senha123';
 
-// Rota de Autenticação (Login)
+// Rota de Autenticação (Login com sanitização de texto)
 app.post('/api/login', (req, res) => {
-    const { usuario, senha } = req.body;
+    const usuario = (req.body.usuario || '').trim().toLowerCase();
+    const senha = (req.body.senha || '').trim();
+
     if (usuario === USER_AUTH && senha === PASS_AUTH) {
         return res.json({ success: true, message: 'Autenticado com sucesso!' });
     }
@@ -90,9 +92,7 @@ db.serialize(() => {
     db.run(`ALTER TABLE contas ADD COLUMN forma_pagamento TEXT`, () => {});
 });
 
-// --- ROTAS DA API ---
-
-// Clientes
+// Rotas API
 app.get('/api/clientes', (req, res) => {
     db.all("SELECT * FROM clientes", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -111,7 +111,6 @@ app.post('/api/clientes', (req, res) => {
     );
 });
 
-// Fornecedores
 app.get('/api/fornecedores', (req, res) => {
     db.all("SELECT * FROM fornecedores", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -130,7 +129,6 @@ app.post('/api/fornecedores', (req, res) => {
     );
 });
 
-// Produtos
 app.get('/api/produtos', (req, res) => {
     db.all("SELECT * FROM produtos", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -149,7 +147,6 @@ app.post('/api/produtos', (req, res) => {
     );
 });
 
-// Contas
 app.get('/api/contas', (req, res) => {
     db.all("SELECT * FROM contas", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -168,7 +165,6 @@ app.post('/api/contas', (req, res) => {
     );
 });
 
-// Atualizar Status da Conta (Paga/Pendente)
 app.patch('/api/contas/:id', (req, res) => {
     const { status } = req.body;
     db.run("UPDATE contas SET status = ? WHERE id = ?", [status, req.params.id], function(err) {
@@ -177,7 +173,6 @@ app.patch('/api/contas/:id', (req, res) => {
     });
 });
 
-// Vendas
 app.post('/api/vendas', (req, res) => {
     const { cliente_id, itens, forma_pagamento, status_pagamento } = req.body;
     let valor_total = itens.reduce((sum, item) => sum + (item.quantidade * item.preco_unitario), 0);
@@ -205,7 +200,6 @@ app.post('/api/vendas', (req, res) => {
     );
 });
 
-// Relatório de Estoque
 app.get('/api/relatorios/estoque', (req, res) => {
     db.all("SELECT id, nome, estoque_atual, preco_venda FROM produtos", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
