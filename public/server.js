@@ -7,43 +7,30 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// --- AUTENTICAÇÃO BÁSICA ---
-// Altere 'admin' e 'senha123' para o usuário e senha desejados
+// Servir arquivos estáticos (CSS, JS, imagens) SEM bloqueio para não quebrar o layout
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Credenciais de Acesso ao Sistema
 const USER_AUTH = 'admin';
 const PASS_AUTH = 'senha123';
 
-const basicAuth = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-        res.setHeader('WWW-Authenticate', 'Basic realm="Acesso Restrito"');
-        return res.status(401).send('Acesso não autorizado.');
-    }
-
-    const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-    const user = auth[0];
-    const pass = auth[1];
-
-    if (user === USER_AUTH && pass === PASS_AUTH) {
-        return next();
+// Rota de Login para validar credenciais no Frontend
+app.post('/api/login', (req, res) => {
+    const { usuario, senha } = req.body;
+    if (usuario === USER_AUTH && senha === PASS_AUTH) {
+        res.json({ success: true, message: 'Autenticado com sucesso!' });
     } else {
-        res.setHeader('WWW-Authenticate', 'Basic realm="Acesso Restrito"');
-        return res.status(401).send('Credenciais inválidas.');
+        res.status(401).json({ success: false, message: 'Usuário ou senha inválidos.' });
     }
-};
+});
 
-// Aplicar autenticação em todas as rotas da API e frontend
-app.use(basicAuth);
-
-// Servir arquivos estáticos do frontend
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Conexão Banco de Dados
+// Conexão com o Banco de Dados
 const db = new sqlite3.Database('./loja.db', (err) => {
     if (err) console.error('Erro ao abrir banco:', err.message);
     else console.log('Conectado ao SQLite.');
 });
 
-// Criar/Atualizar Tabelas
+// Criar Tabelas
 db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS clientes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -101,7 +88,6 @@ db.serialize(() => {
         FOREIGN KEY(produto_id) REFERENCES produtos(id)
     )`);
 
-    // Adiciona a coluna forma_pagamento caso a tabela contas já exista de versões anteriores
     db.run(`ALTER TABLE contas ADD COLUMN forma_pagamento TEXT`, (err) => {});
 });
 
@@ -143,6 +129,13 @@ app.post('/api/fornecedores', (req, res) => {
     );
 });
 
+app.get('/api/produtos', (req, res) => {
+    db.all("SELECT * FROM produtos", [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
 app.post('/api/produtos', (req, res) => {
     const { nome, preco_custo, preco_venda, estoque_atual, fornecedor_id } = req.body;
     db.run("INSERT INTO produtos (nome, preco_custo, preco_venda, estoque_atual, fornecedor_id) VALUES (?, ?, ?, ?, ?)",
@@ -172,7 +165,6 @@ app.post('/api/contas', (req, res) => {
     );
 });
 
-// Emissão de Venda atualizada com Forma de Pagamento e Status
 app.post('/api/vendas', (req, res) => {
     const { cliente_id, itens, forma_pagamento, status_pagamento } = req.body;
     let valor_total = itens.reduce((sum, item) => sum + (item.quantidade * item.preco_unitario), 0);
@@ -193,7 +185,7 @@ app.post('/api/vendas', (req, res) => {
 
             const hoje = new Date().toISOString().split('T')[0];
             db.run("INSERT INTO contas (tipo, descricao, valor, data_vencimento, status, forma_pagamento) VALUES (?, ?, ?, ?, ?, ?)",
-                ['RECEBER', `Venda #${venda_id} (${forma_pagamento})`, valor_total, hoje, status_pagamento, forma_pagamento]);
+                ['RECEBER', `Venda #${venda_id}`, valor_total, hoje, status_pagamento, forma_pagamento]);
 
             res.json({ venda_id, valor_total });
         }
