@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Web de Controle de Loja</title>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-hover: #1e40af;
+            --secondary: #0f766e;
+            --secondary-hover: #115e59;
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --danger: #dc2626;
+            --success: #16a34a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Nav */
+        .sidebar {
+            width: 260px;
+            background-color: var(--primary);
+            color: #ffffff;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+        }
+
+        .sidebar h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            padding-bottom: 12px;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-button {
+            width: 100%;
+            background: transparent;
+            color: #cbd5e1;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 6px;
+            text-align: left;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .nav-button:hover, .nav-button.active {
+            background-color: rgba(255,255,255,0.15);
+            color: #ffffff;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+        }
+
+        .section-panel {
+            display: none;
+        }
+
+        .section-panel.active {
+            display: block;
+        }
+
+        .page-header {
+            margin-bottom: 24px;
+        }
+
+        .page-header h2 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .page-header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Card Form */
+        .card {
+            background-color: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-main);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        input, select, textarea {
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--secondary-hover);
+        }
+
+        /* Table Styling */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: var(--text-main);
+            font-weight: 600;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-pagar { background-color: #fee2e2; color: #991b1b; }
+        .badge-receber { background-color: #dcfce7; color: #166534; }
+        .badge-pendente { background-color: #fef3c7; color: #92400e; }
+        .badge-pago { background-color: #e0e7ff; color: #3730a3; }
+
+        .alert-box {
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .alert-success { background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+        .alert-error { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Navegação -->
+    <nav class="sidebar">
+        <h1>Controle de Loja</h1>
+        <ul class="nav-list">
+            <li><button class="nav-button active" onclick="showSection('sec-clientes', event)">👥 Clientes</button></li>
+            <li><button class="nav-button" onclick="showSection('sec-fornecedores', event)">🏢 Fornecedores</button></li>
+            <li><button class="nav-button" onclick="showSection('sec-produtos', event)">📦 Produtos</button></li>
+            <li><button class="nav-button" onclick="showSection('sec-contas', event)">💰 Contas Pagar / Receber</button></li>
+            <li><button class="nav-button" onclick="showSection('sec-vendas', event)">🛒 Vendas & Estoque</button></li>
+        </ul>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <main class="main-content">
+        <div id="alertContainer" class="alert-box"></div>
+
+        <!-- CADASTRO DE CLIENTES -->
+        <section id="sec-clientes" class="section-panel active">
+            <div class="page-header">
+                <h2>Cadastro de Clientes</h2>
+                <p>Gerencie o registro de clientes para emissão de vendas e contas a receber.</p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Novo Cliente</h3>
+                <form id="formCliente" onsubmit="salvarCliente(event)">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="cli_nome">Nome Completo / Razão Social *</label>
+                            <input type="text" id="cli_nome" required placeholder="Ex: Maria Silva">
+                        </div>
+                        <div class="form-group">
+                            <label for="cli_cpf_cnpj">CPF ou CNPJ</label>
+                            <input type="text" id="cli_cpf_cnpj" placeholder="000.000.000-00">
+                        </div>
+                        <div class="form-group">
+                            <label for="cli_telefone">Telefone / WhatsApp</label>
+                            <input type="tel" id="cli_telefone" placeholder="(84) 99999-0000">
+                        </div>
+                        <div class="form-group">
+                            <label for="cli_email">E-mail</label>
+                            <input type="email" id="cli_email" placeholder="cliente@email.com">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Cadastrar Cliente</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Clientes Cadastrados</h3>
+                <div class="table-responsive">
+                    <table id="tblClientes">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>CPF/CNPJ</th>
+                                <th>Telefone</th>
+                                <th>E-mail</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- CADASTRO DE FORNECEDORES -->
+        <section id="sec-fornecedores" class="section-panel">
+            <div class="page-header">
+                <h2>Cadastro de Fornecedores</h2>
+                <p>Gerencie os fornecedores responsáveis pelo fornecimento dos produtos.</p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Novo Fornecedor</h3>
+                <form id="formFornecedor" onsubmit="salvarFornecedor(event)">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="for_nome">Nome Fantasia / Razão Social *</label>
+                            <input type="text" id="for_nome" required placeholder="Ex: Distribuidora Nordeste LTDA">
+                        </div>
+                        <div class="form-group">
+                            <label for="for_cnpj">CNPJ *</label>
+                            <input type="text" id="for_cnpj" required placeholder="00.000.000/0001-00">
+                        </div>
+                        <div class="form-group">
+                            <label for="for_telefone">Telefone de Contato</label>
+                            <input type="tel" id="for_telefone" placeholder="(84) 3333-0000">
+                        </div>
+                        <div class="form-group">
+                            <label for="for_email">E-mail Comercial</label>
+                            <input type="email" id="for_email" placeholder="contato@fornecedor.com">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Cadastrar Fornecedor</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Fornecedores Cadastrados</h3>
+                <div class="table-responsive">
+                    <table id="tblFornecedores">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome Fantasia</th>
+                                <th>CNPJ</th>
+                                <th>Telefone</th>
+                                <th>E-mail</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- CADASTRO DE PRODUTOS -->
+        <section id="sec-produtos" class="section-panel">
+            <div class="page-header">
+                <h2>Cadastro de Produtos</h2>
+                <p>Cadastre produtos, ajuste de preços e controle de estoque de entrada.</p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Novo Produto</h3>
+                <form id="formProduto" onsubmit="salvarProduto(event)">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="prod_nome">Descrição do Produto *</label>
+                            <input type="text" id="prod_nome" required placeholder="Ex: Panela de Pressão 4.5L">
+                        </div>
+                        <div class="form-group">
+                            <label for="prod_custo">Preço de Custo (R$) *</label>
+                            <input type="number" step="0.01" id="prod_custo" required placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="prod_venda">Preço de Venda (R$) *</label>
+                            <input type="number" step="0.01" id="prod_venda" required placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="prod_estoque">Estoque Inicial</label>
+                            <input type="number" id="prod_estoque" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="prod_fornecedor">Fornecedor</label>
+                            <select id="prod_fornecedor">
+                                <option value="">Selecione um fornecedor...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Cadastrar Produto</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- CONTAS A PAGAR E RECEBER -->
+        <section id="sec-contas" class="section-panel">
+            <div class="page-header">
+                <h2>Contas a Pagar e Receber</h2>
+                <p>Lançamento manual de títulos financeiros, controle de despesas e receitas.</p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Lançamento de Conta</h3>
+                <form id="formConta" onsubmit="salvarConta(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="conta_tipo">Tipo de Conta *</label>
+                            <select id="conta_tipo" required>
+                                <option value="PAGAR">A Pagar (Despesa)</option>
+                                <option value="RECEBER">A Receber (Receita)</option>
+                            </select>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="conta_descricao">Descrição do Título / Histórico *</label>
+                            <input type="text" id="conta_descricao" required placeholder="Ex: Conta de Energia, Boleto de Fornecedor">
+                        </div>
+                        <div class="form-group">
+                            <label for="conta_valor">Valor (R$) *</label>
+                            <input type="number" step="0.01" id="conta_valor" required placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="conta_vencimento">Data de Vencimento *</label>
+                            <input type="date" id="conta_vencimento" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="conta_status">Status Inicial *</label>
+                            <select id="conta_status" required>
+                                <option value="PENDENTE">Pendente</option>
+                                <option value="PAGO">Pago / Quitado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Lançar Conta</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Listagem de Contas</h3>
+                <div class="table-responsive">
+                    <table id="tblContas">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tipo</th>
+                                <th>Descrição</th>
+                                <th>Valor</th>
+                                <th>Vencimento</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- EMISSÃO DE VENDA E RELATÓRIO DE ESTOQUE -->
+        <section id="sec-vendas" class="section-panel">
+            <div class="page-header">
+                <h2>Emissão de Venda & Relatório de Estoque</h2>
+                <p>Registre vendas com atualização automática de estoque e geração de conta a receber.</p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Emitir Venda</h3>
+                <form id="formVenda" onsubmit="emitirVenda(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="venda_cliente">Cliente</label>
+                            <select id="venda_cliente" required>
+                                <option value="">Selecione o cliente...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="venda_produto">Produto</label>
+                            <select id="venda_produto" required onchange="atualizarPrecoProduto()">
+                                <option value="">Selecione o produto...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="venda_qtd">Quantidade *</label>
+                            <input type="number" id="venda_qtd" min="1" value="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="venda_preco">Preço Unitário (R$) *</label>
+                            <input type="number" step="0.01" id="venda_preco" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-secondary">Finalizar Venda</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Relatório de Posição de Estoque</h3>
+                <div class="table-responsive">
+                    <table id="tblEstoque">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Produto</th>
+                                <th>Estoque Atual</th>
+                                <th>Preço Venda</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Rota relativa pronta para o Render e ambiente local
+        const API_URL = '/api';
+
+        function showSection(sectionId, evt) {
+            document.querySelectorAll('.section-panel').forEach(panel => panel.classList.remove('active'));
+            document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(sectionId).classList.add('active');
+            if (evt && evt.target) evt.target.classList.add('active');
+
+            if (sectionId === 'sec-clientes') carregarClientes();
+            if (sectionId === 'sec-fornecedores') carregarFornecedores();
+            if (sectionId === 'sec-produtos') carregarSelectFornecedores();
+            if (sectionId === 'sec-contas') carregarContas();
+            if (sectionId === 'sec-vendas') {
+                carregarSelectClientes();
+                carregarSelectProdutos();
+                carregarRelatorioEstoque();
+            }
+        }
+
+        function showAlert(msg, isSuccess = true) {
+            const box = document.getElementById('alertContainer');
+            box.className = `alert-box ${isSuccess ? 'alert-success' : 'alert-error'}`;
+            box.innerText = msg;
+            box.style.display = 'block';
+            setTimeout(() => box.style.display = 'none', 4000);
+        }
+
+        // --- CLIENTES ---
+        async function salvarCliente(e) {
+            e.preventDefault();
+            const data = {
+                nome: document.getElementById('cli_nome').value,
+                cpf_cnpj: document.getElementById('cli_cpf_cnpj').value,
+                telefone: document.getElementById('cli_telefone').value,
+                email: document.getElementById('cli_email').value
+            };
+            try {
+                const res = await fetch(`${API_URL}/clientes`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    showAlert('Cliente cadastrado com sucesso!');
+                    document.getElementById('formCliente').reset();
+                    carregarClientes();
+                } else showAlert('Erro ao salvar cliente.', false);
+            } catch (err) { showAlert('Servidor offline ou erro de conexão.', false); }
+        }
+
+        async function carregarClientes() {
+            try {
+                const res = await fetch(`${API_URL}/clientes`);
+                const dados = await res.json();
+                const tbody = document.querySelector('#tblClientes tbody');
+                tbody.innerHTML = dados.map(c => `
+                    <tr>
+                        <td>${c.id}</td>
+                        <td>${c.nome}</td>
+                        <td>${c.cpf_cnpj || '-'}</td>
+                        <td>${c.telefone || '-'}</td>
+                        <td>${c.email || '-'}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {}
+        }
+
+        // --- FORNECEDORES ---
+        async function salvarFornecedor(e) {
+            e.preventDefault();
+            const data = {
+                nome_fantasia: document.getElementById('for_nome').value,
+                cnpj: document.getElementById('for_cnpj').value,
+                telefone: document.getElementById('for_telefone').value,
+                email: document.getElementById('for_email').value
+            };
+            try {
+                const res = await fetch(`${API_URL}/fornecedores`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    showAlert('Fornecedor cadastrado com sucesso!');
+                    document.getElementById('formFornecedor').reset();
+                    carregarFornecedores();
+                } else showAlert('Erro ao salvar fornecedor.', false);
+            } catch (err) { showAlert('Servidor offline ou erro de conexão.', false); }
+        }
+
+        async function carregarFornecedores() {
+            try {
+                const res = await fetch(`${API_URL}/fornecedores`);
+                const dados = await res.json();
+                const tbody = document.querySelector('#tblFornecedores tbody');
+                tbody.innerHTML = dados.map(f => `
+                    <tr>
+                        <td>${f.id}</td>
+                        <td>${f.nome_fantasia}</td>
+                        <td>${f.cnpj}</td>
+                        <td>${f.telefone || '-'}</td>
+                        <td>${f.email || '-'}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {}
+        }
+
+        async function carregarSelectFornecedores() {
+            try {
+                const res = await fetch(`${API_URL}/fornecedores`);
+                const dados = await res.json();
+                const select = document.getElementById('prod_fornecedor');
+                select.innerHTML = '<option value="">Selecione um fornecedor...</option>' + 
+                    dados.map(f => `<option value="${f.id}">${f.nome_fantasia}</option>`).join('');
+            } catch(e) {}
+        }
+
+        // --- PRODUTOS ---
+        async function salvarProduto(e) {
+            e.preventDefault();
+            const data = {
+                nome: document.getElementById('prod_nome').value,
+                preco_custo: parseFloat(document.getElementById('prod_custo').value),
+                preco_venda: parseFloat(document.getElementById('prod_venda').value),
+                estoque_atual: parseInt(document.getElementById('prod_estoque').value) || 0,
+                fornecedor_id: document.getElementById('prod_fornecedor').value || null
+            };
+            try {
+                const res = await fetch(`${API_URL}/produtos`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    showAlert('Produto cadastrado com sucesso!');
+                    document.getElementById('formProduto').reset();
+                } else showAlert('Erro ao cadastrar produto.', false);
+            } catch(e) { showAlert('Erro na comunicação com o servidor.', false); }
+        }
+
+        // --- CONTAS A PAGAR / RECEBER ---
+        async function salvarConta(e) {
+            e.preventDefault();
+            const data = {
+                tipo: document.getElementById('conta_tipo').value,
+                descricao: document.getElementById('conta_descricao').value,
+                valor: parseFloat(document.getElementById('conta_valor').value),
+                data_vencimento: document.getElementById('conta_vencimento').value,
+                status: document.getElementById('conta_status').value
+            };
+            try {
+                const res = await fetch(`${API_URL}/contas`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    showAlert('Título financeiro registrado com sucesso!');
+                    document.getElementById('formConta').reset();
+                    carregarContas();
+                } else showAlert('Erro ao salvar conta.', false);
+            } catch(e) { showAlert('Erro de rede.', false); }
+        }
+
+        async function carregarContas() {
+            try {
+                const res = await fetch(`${API_URL}/contas`);
+                const dados = await res.json();
+                const tbody = document.querySelector('#tblContas tbody');
+                tbody.innerHTML = dados.map(c => `
+                    <tr>
+                        <td>${c.id}</td>
+                        <td><span class="badge badge-${c.tipo.toLowerCase()}">${c.tipo}</span></td>
+                        <td>${c.descricao}</td>
+                        <td>R$ ${c.valor.toFixed(2)}</td>
+                        <td>${c.data_vencimento}</td>
+                        <td><span class="badge badge-${c.status.toLowerCase()}">${c.status}</span></td>
+                    </tr>
+                `).join('');
+            } catch(e) {}
+        }
+
+        // --- VENDAS & ESTOQUE ---
+        let produtosCache = [];
+
+        async function carregarSelectClientes() {
+            try {
+                const res = await fetch(`${API_URL}/clientes`);
+                const dados = await res.json();
+                const select = document.getElementById('venda_cliente');
+                select.innerHTML = '<option value="">Selecione o cliente...</option>' + 
+                    dados.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+            } catch(e) {}
+        }
+
+        async function carregarSelectProdutos() {
+            try {
+                const res = await fetch(`${API_URL}/relatorios/estoque`);
+                produtosCache = await res.json();
+                const select = document.getElementById('venda_produto');
+                select.innerHTML = '<option value="">Selecione o produto...</option>' + 
+                    produtosCache.map(p => `<option value="${p.id}">${p.nome} (Estoque: ${p.estoque_atual})</option>`).join('');
+            } catch(e) {}
+        }
+
+        function atualizarPrecoProduto() {
+            const prodId = document.getElementById('venda_produto').value;
+            const prod = produtosCache.find(p => p.id == prodId);
+            if (prod) {
+                document.getElementById('venda_preco').value = prod.preco_venda;
+            }
+        }
+
+        async function emitirVenda(e) {
+            e.preventDefault();
+            const cliente_id = document.getElementById('venda_cliente').value;
+            const produto_id = document.getElementById('venda_produto').value;
+            const quantidade = parseInt(document.getElementById('venda_qtd').value);
+            const preco_unitario = parseFloat(document.getElementById('venda_preco').value);
+
+            const payload = {
+                cliente_id: parseInt(cliente_id),
+                itens: [{ produto_id: parseInt(produto_id), quantidade, preco_unitario }]
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/vendas`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    showAlert('Venda emitida e estoque atualizado com sucesso!');
+                    document.getElementById('formVenda').reset();
+                    carregarSelectProdutos();
+                    carregarRelatorioEstoque();
+                } else showAlert('Falha ao emitir venda.', false);
+            } catch(e) { showAlert('Erro de conexão.', false); }
+        }
+
+        async function carregarRelatorioEstoque() {
+            try {
+                const res = await fetch(`${API_URL}/relatorios/estoque`);
+                const dados = await res.json();
+                const tbody = document.querySelector('#tblEstoque tbody');
+                tbody.innerHTML = dados.map(p => `
+                    <tr>
+                        <td>${p.id}</td>
+                        <td>${p.nome}</td>
+                        <td><strong>${p.estoque_atual}</strong></td>
+                        <td>R$ ${p.preco_venda.toFixed(2)}</td>
+                    </tr>
+                `).join('');
+            } catch(e) {}
+        }
+
+        // Inicialização
+        carregarClientes();
+    </script>
+</body>
+</html>
