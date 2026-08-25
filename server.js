@@ -201,8 +201,29 @@ app.post('/api/contas', (req, res) => {
 });
 
 /* --- API VENDAS --- */
+app.get('/api/vendas', (req, res) => {
+    const query = `
+        SELECT v.*, c.nome as cliente_nome, p.nome as produto_nome, v.status as status_pagamento 
+        FROM vendas v
+        LEFT JOIN clientes c ON v.cliente_id = c.id
+        LEFT JOIN produtos p ON v.produto_id = p.id
+        ORDER BY v.id DESC
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
 app.post('/api/vendas', (req, res) => {
-    const { cliente_id, produto_id, quantidade, preco_unitario, forma_pagamento, status } = req.body;
+    // Compatível tanto se o front enviar 'status' quanto 'status_pagamento'
+    const cliente_id = req.body.cliente_id;
+    const produto_id = req.body.produto_id;
+    const quantidade = req.body.quantidade;
+    const preco_unitario = req.body.preco_unitario;
+    const forma_pagamento = req.body.forma_pagamento;
+    const status = req.body.status || req.body.status_pagamento;
+    
     const valor_total = quantidade * preco_unitario;
 
     db.run('INSERT INTO vendas (cliente_id, produto_id, quantidade, preco_unitario, valor_total, forma_pagamento, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -217,7 +238,7 @@ app.post('/api/vendas', (req, res) => {
             if (status === 'PENDENTE') {
                 const hoje = new Date().toISOString().split('T')[0];
                 db.run('INSERT INTO contas (tipo, descricao, valor, vencimento, status) VALUES (?, ?, ?, ?, ?)',
-                    ['RECEBER', `Venda #${this.lastID} - Cliente ${cliente_id}`, valor_total, hoje, 'PENDENTE']);
+                    ['RECEBER', `Venda #${this.lastID} - Cliente ID ${cliente_id}`, valor_total, hoje, 'PENDENTE']);
             }
 
             res.json({ id: this.lastID });
