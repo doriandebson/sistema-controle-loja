@@ -1,265 +1,45 @@
-function editarFornecedor(id) {
-            const f = cacheFornecedores.find(item => item.id === id);
-            if (!f) return;
-            document.getElementById('for_id').value = f.id;
-            document.getElementById('for_nome').value = f.nome_fantasia;
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Loja</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+    <!-- Estrutura Principal da Aplicação -->
+    <div id="app">
+        <h1>Sistema de Controle de Loja</h1>
+
+        <!-- Tabelas e Formulários são renderizados aqui -->
+        
+    </div>
+
+    <!-- Modal de Ajuste de Estoque -->
+    <div id="modalEstoque" class="modal">
+        <div class="modal-content">
+            <h3>Ajustar Estoque: <span id="modalNomeProduto"></span></h3>
+            <input type="hidden" id="modal_prod_id">
             
-            const doc = f.cnpj || '';
-            const isCPF = doc.length <= 14;
-            document.getElementById('for_tipo_doc').value = isCPF ? 'CPF' : 'CNPJ';
-            alterarTipoDocFornecedor();
-            
-            document.getElementById('for_cnpj').value = doc;
-            document.getElementById('for_ie').value = f.ie || '';
-            document.getElementById('for_telefone').value = f.telefone || '';
-            document.getElementById('for_email').value = f.email || '';
-            document.getElementById('for_contato').value = f.contato || '';
-            document.getElementById('for_obs').value = f.observacoes || '';
+            <label for="modal_tipo_ajuste">Tipo de Ajuste:</label>
+            <select id="modal_tipo_ajuste">
+                <option value="SOMAR">Somar (+)</option>
+                <option value="SUBTRAIR">Subtrair (-)</option>
+                <option value="DEFINIR">Definir Valor Exato</option>
+            </select>
 
-            document.getElementById('titleFormFornecedor').innerText = 'Editar Fornecedor';
-            document.getElementById('btnSalvarFornecedor').innerText = 'Atualizar Fornecedor';
-        }
+            <label for="modal_qtd_ajuste">Quantidade:</label>
+            <input type="number" id="modal_qtd_ajuste" min="1" value="1">
 
-        function resetFormFornecedor() {
-            document.getElementById('formFornecedor').reset();
-            document.getElementById('for_id').value = '';
-            alterarTipoDocFornecedor();
-            document.getElementById('titleFormFornecedor').innerText = 'Cadastrar Fornecedor';
-            document.getElementById('btnSalvarFornecedor').innerText = 'Salvar Fornecedor';
-        }
+            <div class="modal-actions">
+                <button onclick="confirmarAjusteEstoque()" class="btn btn-primary">Salvar</button>
+                <button onclick="fecharModalEstoque()" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
 
-        async function excluirFornecedor(id) {
-            if (!confirm('Deseja realmente excluir este fornecedor?')) return;
-            const res = await fetch(`${API_URL}/fornecedores/${id}`, { method: 'DELETE' });
-            if (res.ok) carregarFornecedores();
-            else alert('Erro ao excluir fornecedor.');
-        }
-
-        /* --- GERENCIAMENTO DE PRODUTOS --- */
-        async function carregarProdutos() {
-            const res = await fetch(`${API_URL}/produtos`);
-            cacheProdutos = await res.json();
-            renderTabelaProdutos(cacheProdutos);
-        }
-
-        function renderTabelaProdutos(lista) {
-            const tbody = document.querySelector('#tblProdutos tbody');
-            tbody.innerHTML = '';
-            lista.forEach(p => {
-                const fornec = cacheFornecedores.find(f => f.id === p.fornecedor_id);
-                tbody.innerHTML += `<tr>
-                    <td>${p.id}</td>
-                    <td>${p.codigo || '-'}</td>
-                    <td>${p.nome}</td>
-                    <td>R$ ${parseFloat(p.preco_custo || 0).toFixed(2)}</td>
-                    <td>R$ ${parseFloat(p.preco_venda || 0).toFixed(2)}</td>
-                    <td><strong>${p.estoque}</strong></td>
-                    <td>${fornec ? fornec.nome_fantasia : '-'}</td>
-                    <td>
-                        <button class="btn btn-sm btn-stock" onclick="abrirModalEstoque(${p.id})">Estoque</button>
-                        <button class="btn btn-sm btn-edit" onclick="editarProduto(${p.id})">Editar</button>
-                        <button class="btn btn-sm btn-del" onclick="excluirProduto(${p.id})">Excluir</button>
-                    </td>
-                </tr>`;
-            });
-        }
-
-        function filtrarProdutos(termo) {
-            const t = termo.toLowerCase();
-            const filtrados = cacheProdutos.filter(p => 
-                p.nome.toLowerCase().includes(t) || (p.codigo && p.codigo.toLowerCase().includes(t))
-            );
-            renderTabelaProdutos(filtrados);
-        }
-
-        async function salvarProduto(e) {
-            e.preventDefault();
-            const id = document.getElementById('prod_id').value;
-            const payload = {
-                codigo: document.getElementById('prod_codigo').value,
-                nome: document.getElementById('prod_nome').value,
-                preco_custo: parseFloat(document.getElementById('prod_custo').value),
-                preco_venda: parseFloat(document.getElementById('prod_venda').value),
-                estoque: parseInt(document.getElementById('prod_estoque').value),
-                fornecedor_id: document.getElementById('prod_fornecedor').value || null
-            };
-
-            const url = id ? `${API_URL}/produtos/${id}` : `${API_URL}/produtos`;
-            const method = id ? 'PUT' : 'POST';
-
-            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (res.ok) {
-                resetFormProduto();
-                carregarProdutos();
-            } else {
-                alert('Erro ao salvar produto.');
-            }
-        }
-
-        function editarProduto(id) {
-            const p = cacheProdutos.find(item => item.id === id);
-            if (!p) return;
-            document.getElementById('prod_id').value = p.id;
-            document.getElementById('prod_codigo').value = p.codigo || '';
-            document.getElementById('prod_nome').value = p.nome;
-            document.getElementById('prod_custo').value = p.preco_custo;
-            document.getElementById('prod_venda').value = p.preco_venda;
-            document.getElementById('prod_estoque').value = p.estoque;
-            document.getElementById('prod_fornecedor').value = p.fornecedor_id || '';
-
-            document.getElementById('titleFormProduto').innerText = 'Editar Produto';
-            document.getElementById('btnSalvarProduto').innerText = 'Atualizar Produto';
-        }
-
-        function resetFormProduto() {
-            document.getElementById('formProduto').reset();
-            document.getElementById('prod_id').value = '';
-            document.getElementById('titleFormProduto').innerText = 'Cadastrar Produto';
-            document.getElementById('btnSalvarProduto').innerText = 'Salvar Produto';
-        }
-
-        async function excluirProduto(id) {
-            if (!confirm('Deseja realmente excluir este produto?')) return;
-            const res = await fetch(`${API_URL}/produtos/${id}`, { method: 'DELETE' });
-            if (res.ok) carregarProdutos();
-            else alert('Erro ao excluir produto.');
-        }
-
-        /* --- AJUSTE RÁPIDO DE ESTOQUE (MODAL) --- */
-        function abrirModalEstoque(id) {
-            const p = cacheProdutos.find(item => item.id === id);
-            if (!p) return;
-            document.getElementById('modal_prod_id').value = p.id;
-            document.getElementById('modalNomeProduto').innerText = `${p.nome} (Atual: ${p.estoque})`;
-            document.getElementById('modal_qtd_ajuste').value = 1;
-            document.getElementById('modalEstoque').classList.add('active');
-        }
-
-        function fecharModalEstoque() {
-            document.getElementById('modalEstoque').classList.remove('active');
-        }
-
-        async function confirmarAjusteEstoque() {
-            const id = document.getElementById('modal_prod_id').value;
-            const tipo = document.getElementById('modal_tipo_ajuste').value;
-            const qtd = parseInt(document.getElementById('modal_qtd_ajuste').value);
-
-            const res = await fetch(`${API_URL}/produtos/${id}/estoque`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tipo, quantidade: qtd })
-            });
-
-            if (res.ok) {
-                fecharModalEstoque();
-                carregarProdutos();
-                carregarRelatorioEstoque();
-            } else {
-                alert('Erro ao atualizar estoque.');
-            }
-        }
-
-        /* --- CONTAS PAGAR / RECEBER --- */
-        async function carregarContas() {
-            const res = await fetch(`${API_URL}/contas`);
-            const contas = await res.json();
-            const tbody = document.querySelector('#tblContas tbody');
-            tbody.innerHTML = '';
-            contas.forEach(c => {
-                const badgeClass = c.status === 'PAGO' ? 'badge-pago' : 'badge-pendente';
-                tbody.innerHTML += `<tr>
-                    <td>${c.id}</td>
-                    <td>${c.tipo}</td>
-                    <td>${c.descricao}</td>
-                    <td>R$ ${parseFloat(c.valor).toFixed(2)}</td>
-                    <td>${c.vencimento}</td>
-                    <td><span class="badge ${badgeClass}">${c.status}</span></td>
-                </tr>`;
-            });
-        }
-
-        async function cadastrarConta(e) {
-            e.preventDefault();
-            const payload = {
-                tipo: document.getElementById('conta_tipo').value,
-                descricao: document.getElementById('conta_desc').value,
-                valor: parseFloat(document.getElementById('conta_valor').value),
-                vencimento: document.getElementById('conta_vencimento').value,
-                status: document.getElementById('conta_status').value
-            };
-
-            const res = await fetch(`${API_URL}/contas`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                document.getElementById('formConta').reset();
-                carregarContas();
-            } else {
-                alert('Erro ao lançar conta.');
-            }
-        }
-
-        /* --- VENDAS & ESTOQUE --- */
-        function carregarSelectProdutos() {
-            const selectVenda = document.getElementById('venda_produto');
-            selectVenda.innerHTML = '<option value="">Selecione...</option>';
-            cacheProdutos.forEach(p => selectVenda.innerHTML += `<option value="${p.id}">${p.nome}</option>`);
-        }
-
-        function atualizarPrecoProduto() {
-            const prodId = parseInt(document.getElementById('venda_produto').value);
-            const prod = cacheProdutos.find(p => p.id === prodId);
-            if (prod) {
-                document.getElementById('venda_preco').value = prod.preco_venda;
-            }
-        }
-
-        async function emitirVenda(e) {
-            e.preventDefault();
-            const payload = {
-                cliente_id: document.getElementById('venda_cliente').value,
-                produto_id: document.getElementById('venda_produto').value,
-                quantidade: parseInt(document.getElementById('venda_qtd').value),
-                preco_unitario: parseFloat(document.getElementById('venda_preco').value),
-                forma_pagamento: document.getElementById('venda_pagamento').value,
-                status: document.getElementById('venda_status').value
-            };
-
-            const res = await fetch(`${API_URL}/vendas`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                document.getElementById('formVenda').reset();
-                carregarProdutos();
-                carregarRelatorioEstoque();
-                alert('Venda emitida com sucesso!');
-            } else {
-                alert('Erro ao processar venda.');
-            }
-        }
-
-        function carregarRelatorioEstoque() {
-            const tbody = document.querySelector('#tblEstoque tbody');
-            tbody.innerHTML = '';
-            cacheProdutos.forEach(p => {
-                tbody.innerHTML += `<tr>
-                    <td>${p.codigo || '-'}</td>
-                    <td>${p.nome}</td>
-                    <td><strong>${p.estoque}</strong></td>
-                    <td>R$ ${parseFloat(p.preco_venda).toFixed(2)}</td>
-                </tr>`;
-            });
-        }
-    </script>
-</body>
-</html>
-<!-- Final do seu HTML -->
+    <!-- O JavaScript completo deve ser carregado via app.js -->
     <script src="/app.js"></script>
 </body>
 </html>
