@@ -28,9 +28,11 @@
         .card-title { font-size: 1.1rem; margin-bottom: 15px; color: #1a2a52; border-bottom: 1px solid #eee; padding-bottom: 8px; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
         .form-group { display: flex; flex-direction: column; }
+        .form-group.full-width { grid-column: 1 / -1; }
         .form-group label { font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: #444; }
-        .form-group input, .form-group select { padding: 9px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
-        .form-group input:focus, .form-group select:focus { border-color: #1a2a52; outline: none; }
+        .form-group input, .form-group select, .form-group textarea { padding: 9px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #1a2a52; outline: none; }
 
         /* Botões */
         .btn { padding: 9px 18px; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; background: #1a2a52; color: #fff; }
@@ -145,6 +147,10 @@
                             <label id="lbl_for_doc">CNPJ *</label>
                             <input type="text" id="for_cnpj" placeholder="00.000.000/0000-00" oninput="mascaraCPFCNPJ(this)" maxlength="18" required>
                         </div>
+                        <div class="form-group" id="grp_for_ie">
+                            <label>Inscrição Estadual (IE)</label>
+                            <input type="text" id="for_ie" placeholder="Isento ou nº IE">
+                        </div>
                         <div class="form-group">
                             <label>Telefone</label>
                             <input type="text" id="for_telefone" placeholder="(00) 90000-0000" oninput="mascaraTelefone(this)" maxlength="15">
@@ -152,6 +158,14 @@
                         <div class="form-group">
                             <label>E-mail</label>
                             <input type="email" id="for_email" placeholder="fornecedor@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Pessoa de Contato</label>
+                            <input type="text" id="for_contato" placeholder="Nome do representante/vendedor">
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Observações</label>
+                            <textarea id="for_obs" placeholder="Informações adicionais, condições de pagamento, horários de entrega..."></textarea>
                         </div>
                     </div>
                     <button type="submit" class="btn" id="btnSalvarFornecedor">Salvar Fornecedor</button>
@@ -167,8 +181,10 @@
                                 <th>ID</th>
                                 <th>Nome / Razão Social</th>
                                 <th>CPF / CNPJ</th>
+                                <th>IE</th>
                                 <th>Telefone</th>
                                 <th>E-mail</th>
+                                <th>Contato</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -368,16 +384,19 @@
             const tipo = document.getElementById('for_tipo_doc').value;
             const input = document.getElementById('for_cnpj');
             const label = document.getElementById('lbl_for_doc');
+            const grpIE = document.getElementById('grp_for_ie');
 
             input.value = '';
             if (tipo === 'CPF') {
                 label.innerText = 'CPF *';
                 input.placeholder = '000.000.000-00';
                 input.maxLength = 14;
+                grpIE.style.display = 'none';
             } else {
                 label.innerText = 'CNPJ *';
                 input.placeholder = '00.000.000/0000-00';
                 input.maxLength = 18;
+                grpIE.style.display = 'flex';
             }
         }
 
@@ -508,8 +527,10 @@
                     <td>${f.id}</td>
                     <td>${f.nome_fantasia}</td>
                     <td>${f.cnpj || '-'}</td>
+                    <td>${f.ie || '-'}</td>
                     <td>${f.telefone || '-'}</td>
                     <td>${f.email || '-'}</td>
+                    <td>${f.contato || '-'}</td>
                     <td>
                         <button class="btn btn-sm btn-edit" onclick="editarFornecedor(${f.id})">Editar</button>
                         <button class="btn btn-sm btn-del" onclick="excluirFornecedor(${f.id})">Excluir</button>
@@ -532,8 +553,11 @@
             const payload = {
                 nome_fantasia: document.getElementById('for_nome').value,
                 cnpj: document.getElementById('for_cnpj').value,
+                ie: document.getElementById('for_ie').value,
                 telefone: document.getElementById('for_telefone').value,
-                email: emailInput
+                email: emailInput,
+                contato: document.getElementById('for_contato').value,
+                observacoes: document.getElementById('for_obs').value
             };
 
             const url = id ? `${API_URL}/fornecedores/${id}` : `${API_URL}/fornecedores`;
@@ -561,8 +585,11 @@
             alterarTipoDocFornecedor();
 
             document.getElementById('for_cnpj').value = doc;
+            document.getElementById('for_ie').value = f.ie || '';
             document.getElementById('for_telefone').value = f.telefone || '';
             document.getElementById('for_email').value = f.email || '';
+            document.getElementById('for_contato').value = f.contato || '';
+            document.getElementById('for_obs').value = f.observacoes || '';
 
             document.getElementById('titleFormFornecedor').innerText = 'Editar Fornecedor';
             document.getElementById('btnSalvarFornecedor').innerText = 'Atualizar Fornecedor';
