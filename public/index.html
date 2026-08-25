@@ -834,31 +834,73 @@
         }
 
         async function emitirVenda(e) {
-            e.preventDefault();
-            const payload = {
-                cliente_id: document.getElementById('venda_cliente').value,
-                produto_id: document.getElementById('venda_produto').value,
-                quantidade: parseInt(document.getElementById('venda_qtd').value),
-                preco_unitario: parseFloat(document.getElementById('venda_preco').value),
-                forma_pagamento: document.getElementById('venda_pagamento').value,
-                status_pagamento: document.getElementById('venda_status').value
+    e.preventDefault();
+
+    const clienteId = document.getElementById('venda_cliente').value;
+    const produtoId = document.getElementById('venda_produto').value;
+    const qtd = parseInt(document.getElementById('venda_qtd').value);
+    const preco = parseFloat(document.getElementById('venda_preco').value);
+    const formaPagamento = document.getElementById('venda_pagamento').value;
+    const statusPagamento = document.getElementById('venda_status').value;
+    const valorTotal = qtd * preco;
+
+    const payloadVenda = {
+        cliente_id: clienteId,
+        produto_id: produtoId,
+        quantidade: qtd,
+        preco_unitario: preco,
+        forma_pagamento: formaPagamento,
+        status_pagamento: statusPagamento
+    };
+
+    try {
+        // 1. Registra a venda
+        const resVenda = await fetch(`${API_URL}/vendas`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payloadVenda)
+        });
+
+        if (!resVenda.ok) throw new Error('Erro ao registrar venda.');
+
+        // 2. Se a venda for PENDENTE, gera automaticamente o lançamento em Contas a Receber
+        if (statusPagamento === 'PENDENTE') {
+            const cliente = cacheClientes.find(c => c.id == clienteId);
+            const nomeCliente = cliente ? cliente.nome : 'Cliente Não Identificado';
+            
+            // Define vencimento padrão para 30 dias após hoje
+            const dataVencimento = new Date();
+            dataVencimento.setDate(dataVencimento.getDate() + 30);
+            const vencimentoFormatado = dataVencimento.toISOString().split('T')[0];
+
+            const payloadConta = {
+                tipo: 'RECEBER',
+                descricao: `Venda - Cliente: ${nomeCliente}`,
+                valor: valorTotal,
+                vencimento: vencimentoFormatado,
+                status: 'PENDENTE'
             };
 
-            const res = await fetch(`${API_URL}/vendas`, {
+            await fetch(`${API_URL}/contas`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payloadConta)
             });
-
-            if (res.ok) {
-                alert('Venda realizada com sucesso!');
-                document.getElementById('formVenda').reset();
-                carregarProdutos();
-                carregarRelatorioEstoque();
-            } else {
-                alert('Erro ao emitir venda.');
-            }
         }
+
+        alert('Venda realizada com sucesso!');
+        document.getElementById('formVenda').reset();
+
+        // 3. Atualiza os dados de todas as abas afetadas
+        carregarProdutos();
+        carregarContas();
+        carregarRelatorioEstoque();
+
+    } catch (err) {
+        console.error(err);
+        alert('Erro ao processar a venda.');
+    }
+}
 
         function carregarRelatorioEstoque() {
             const tbody = document.querySelector('#tblEstoque tbody');
