@@ -46,7 +46,6 @@ db.serialize(() => {
         FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id)
     )`);
 
-    // Adiciona coluna codigo_barras caso a tabela produtos já existisse sem ela
     db.run(`ALTER TABLE produtos ADD COLUMN codigo_barras TEXT`, () => {});
 
     db.run(`CREATE TABLE IF NOT EXISTS contas (
@@ -200,6 +199,15 @@ app.post('/api/contas', (req, res) => {
     );
 });
 
+// Nova rota para quitar uma conta
+app.patch('/api/contas/:id/pagar', (req, res) => {
+    const { id } = req.params;
+    db.run('UPDATE contas SET status = "PAGO" WHERE id = ?', [id], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Conta quitada com sucesso!' });
+    });
+});
+
 /* --- API VENDAS --- */
 app.get('/api/vendas', (req, res) => {
     const query = `
@@ -216,7 +224,6 @@ app.get('/api/vendas', (req, res) => {
 });
 
 app.post('/api/vendas', (req, res) => {
-    // Compatível tanto se o front enviar 'status' quanto 'status_pagamento'
     const cliente_id = req.body.cliente_id;
     const produto_id = req.body.produto_id;
     const quantidade = req.body.quantidade;
@@ -231,10 +238,8 @@ app.post('/api/vendas', (req, res) => {
         function(err) {
             if (err) return res.status(500).json({ error: err.message });
 
-            // Abate do estoque
             db.run('UPDATE produtos SET estoque = estoque - ? WHERE id = ?', [quantidade, produto_id]);
 
-            // Se for pendente, cria conta a receber
             if (status === 'PENDENTE') {
                 const hoje = new Date().toISOString().split('T')[0];
                 db.run('INSERT INTO contas (tipo, descricao, valor, vencimento, status) VALUES (?, ?, ?, ?, ?)',
