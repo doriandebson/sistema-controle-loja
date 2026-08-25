@@ -199,12 +199,29 @@ app.post('/api/contas', (req, res) => {
     );
 });
 
-// Nova rota para quitar uma conta
+// Rota inteligente para quitar conta e atualizar a venda vinculada automaticamente
 app.patch('/api/contas/:id/pagar', (req, res) => {
     const { id } = req.params;
-    db.run('UPDATE contas SET status = "PAGO" WHERE id = ?', [id], function(err) {
+
+    db.get('SELECT * FROM contas WHERE id = ?', [id], (err, conta) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Conta quitada com sucesso!' });
+        if (!conta) return res.status(404).json({ error: 'Conta não encontrada' });
+
+        db.run('UPDATE contas SET status = "PAGO" WHERE id = ?', [id], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+
+            if (conta.descricao && conta.descricao.includes('Venda #')) {
+                const match = conta.descricao.match(/Venda #(\d+)/);
+                if (match && match[1]) {
+                    const vendaId = match[1];
+                    db.run('UPDATE vendas SET status = "PAGO" WHERE id = ?', [vendaId], (err3) => {
+                        if (err3) console.error('Erro ao atualizar status da venda:', err3.message);
+                    });
+                }
+            }
+
+            res.json({ message: 'Conta quitada com sucesso e status atualizado!' });
+        });
     });
 });
 
