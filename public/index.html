@@ -43,8 +43,7 @@
         .btn-del { background: #dc3545; color: #fff; }
         .btn-del:hover { background: #c82333; }
 
-        /* Tabelas e Pesquisa */
-        .search-box { margin-bottom: 15px; max-width: 300px; }
+        /* Tabelas */
         .table-responsive { overflow-x: auto; margin-top: 15px; }
         table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
         table th, table td { padding: 12px; border-bottom: 1px solid #eee; }
@@ -79,10 +78,22 @@
                 <form id="formCliente" onsubmit="salvarCliente(event)">
                     <input type="hidden" id="cli_id">
                     <div class="form-grid">
-                        <div class="form-group"><label>Nome *</label><input type="text" id="cli_nome" required></div>
-                        <div class="form-group"><label>CPF *</label><input type="text" id="cli_cpf" placeholder="000.000.000-00" oninput="mascaraCPF(this)" maxlength="14" required></div>
-                        <div class="form-group"><label>Telefone</label><input type="text" id="cli_telefone"></div>
-                        <div class="form-group"><label>E-mail</label><input type="email" id="cli_email"></div>
+                        <div class="form-group">
+                            <label>Nome *</label>
+                            <input type="text" id="cli_nome" required>
+                        </div>
+                        <div class="form-group">
+                            <label>CPF *</label>
+                            <input type="text" id="cli_cpf" placeholder="000.000.000-00" oninput="mascaraCPF(this)" maxlength="14" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Telefone</label>
+                            <input type="text" id="cli_telefone" placeholder="(00) 90000-0000" oninput="mascaraTelefone(this)" maxlength="15">
+                        </div>
+                        <div class="form-group">
+                            <label>E-mail</label>
+                            <input type="email" id="cli_email" placeholder="exemplo@email.com">
+                        </div>
                     </div>
                     <button type="submit" class="btn" id="btnSalvarCliente">Salvar Cliente</button>
                     <button type="button" class="btn btn-secondary" onclick="resetFormCliente()">Cancelar</button>
@@ -92,7 +103,16 @@
                 <h3 class="card-title">Clientes Cadastrados</h3>
                 <div class="table-responsive">
                     <table id="tblClientes">
-                        <thead><tr><th>ID</th><th>Nome</th><th>CPF</th><th>Telefone</th><th>E-mail</th><th>Ações</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>Telefone</th>
+                                <th>E-mail</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -106,31 +126,22 @@
                 <p>Cadastre e gerencie fornecedores parceiros.</p>
             </div>
             <div class="card">
-                <h3 class="card-title" id="titleFormFornecedor">Cadastrar Fornecedor</h3>
-                <form id="formFornecedor" onsubmit="salvarFornecedor(event)">
-                    <input type="hidden" id="for_id">
+                <h3 class="card-title">Cadastrar Fornecedor</h3>
+                <form id="formFornecedor" onsubmit="cadastrarFornecedor(event)">
                     <div class="form-grid">
-                        <div class="form-group"><label>Nome Fantasia / Razão Social *</label><input type="text" id="for_nome" required></div>
-                        <div class="form-group">
-                            <label>Tipo Documento *</label>
-                            <select id="for_tipo_doc" onchange="alterarTipoDocFornecedor()">
-                                <option value="CNPJ">CNPJ</option>
-                                <option value="CPF">CPF</option>
-                            </select>
-                        </div>
-                        <div class="form-group"><label id="lbl_for_doc">CNPJ *</label><input type="text" id="for_cnpj" placeholder="00.000.000/0000-00" oninput="mascaraCPFCNPJ(this)" maxlength="18" required></div>
+                        <div class="form-group"><label>Nome Fantasia *</label><input type="text" id="for_nome" required></div>
+                        <div class="form-group"><label>CNPJ *</label><input type="text" id="for_cnpj" required></div>
                         <div class="form-group"><label>Telefone</label><input type="text" id="for_telefone"></div>
                         <div class="form-group"><label>E-mail</label><input type="email" id="for_email"></div>
                     </div>
-                    <button type="submit" class="btn" id="btnSalvarFornecedor">Salvar Fornecedor</button>
-                    <button type="button" class="btn btn-secondary" onclick="resetFormFornecedor()">Cancelar</button>
+                    <button type="submit" class="btn">Cadastrar Fornecedor</button>
                 </form>
             </div>
             <div class="card">
                 <h3 class="card-title">Fornecedores Cadastrados</h3>
                 <div class="table-responsive">
                     <table id="tblFornecedores">
-                        <thead><tr><th>ID</th><th>Nome Fantasia</th><th>CPF / CNPJ</th><th>Telefone</th><th>E-mail</th><th>Ações</th></tr></thead>
+                        <thead><tr><th>ID</th><th>Nome Fantasia</th><th>CNPJ</th><th>Telefone</th><th>E-mail</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -141,12 +152,11 @@
         <section id="sec-produtos" class="section-panel">
             <div class="page-header">
                 <h2>Gerenciamento de Produtos</h2>
-                <p>Pesquisa, cadastro e atualização do estoque de produtos.</p>
+                <p>Cadastro e atualização do estoque de produtos.</p>
             </div>
             <div class="card">
-                <h3 class="card-title" id="titleFormProduto">Cadastrar Produto</h3>
-                <form id="formProduto" onsubmit="salvarProduto(event)">
-                    <input type="hidden" id="prod_id">
+                <h3 class="card-title">Cadastrar Produto</h3>
+                <form id="formProduto" onsubmit="cadastrarProduto(event)">
                     <div class="form-grid">
                         <div class="form-group"><label>Nome do Produto *</label><input type="text" id="prod_nome" required></div>
                         <div class="form-group"><label>Preço de Custo (R$) *</label><input type="number" step="0.01" id="prod_custo" required></div>
@@ -157,18 +167,14 @@
                             <select id="prod_fornecedor"><option value="">Selecione...</option></select>
                         </div>
                     </div>
-                    <button type="submit" class="btn" id="btnSalvarProduto">Salvar Produto</button>
-                    <button type="button" class="btn btn-secondary" onclick="resetFormProduto()">Cancelar</button>
+                    <button type="submit" class="btn">Cadastrar Produto</button>
                 </form>
             </div>
             <div class="card">
                 <h3 class="card-title">Produtos Cadastrados</h3>
-                <div class="form-group search-box">
-                    <input type="text" id="searchProduto" placeholder="🔎 Pesquisar produto..." oninput="filtrarProdutos(this.value)">
-                </div>
                 <div class="table-responsive">
                     <table id="tblProdutos">
-                        <thead><tr><th>ID</th><th>Nome</th><th>Custo</th><th>Venda</th><th>Estoque</th><th>Ações</th></tr></thead>
+                        <thead><tr><th>ID</th><th>Nome</th><th>Custo</th><th>Venda</th><th>Estoque</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -273,7 +279,6 @@
     <script>
         const API_URL = '/api';
         let cacheClientes = [];
-        let cacheFornecedores = [];
         let cacheProdutos = [];
 
         window.onload = () => carregarDadosIniciais();
@@ -300,7 +305,7 @@
             carregarRelatorioEstoque();
         }
 
-        /* --- MÁSCARAS DE FORMATAÇÃO --- */
+        /* --- MÁSCARAS E VALIDAÇÕES (CLIENTES) --- */
         function mascaraCPF(input) {
             let v = input.value.replace(/\D/g, "");
             v = v.replace(/(\d{3})(\d)/, "$1.$2");
@@ -309,43 +314,27 @@
             input.value = v;
         }
 
-        function mascaraCPFCNPJ(input) {
+        function mascaraTelefone(input) {
             let v = input.value.replace(/\D/g, "");
-            const tipo = document.getElementById('for_tipo_doc').value;
-            
-            if (tipo === 'CPF') {
-                v = v.substring(0, 11);
-                v = v.replace(/(\d{3})(\d)/, "$1.$2");
-                v = v.replace(/(\d{3})(\d)/, "$1.$2");
-                v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-            } else {
-                v = v.substring(0, 14);
-                v = v.replace(/^(\d{2})(\d)/, "$1.$2");
-                v = v.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
-                v = v.replace(/\.(\d{3})(\d)/, ".$1/$2");
-                v = v.replace(/(\d{4})(\d)/, "$1-$2");
+            v = v.substring(0, 11);
+
+            if (v.length > 10) {
+                v = v.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+            } else if (v.length > 5) {
+                v = v.replace(/^(\d{2})(\d{4})(\d{0,4})$/, "($1) $2-$3");
+            } else if (v.length > 2) {
+                v = v.replace(/^(\d{2})(\d{0,5})$/, "($1) $2");
             }
             input.value = v;
         }
 
-        function alterarTipoDocFornecedor() {
-            const tipo = document.getElementById('for_tipo_doc').value;
-            const input = document.getElementById('for_cnpj');
-            const label = document.getElementById('lbl_for_doc');
-            
-            input.value = '';
-            if (tipo === 'CPF') {
-                label.innerText = 'CPF *';
-                input.placeholder = '000.000.000-00';
-                input.maxLength = 14;
-            } else {
-                label.innerText = 'CNPJ *';
-                input.placeholder = '00.000.000/0000-00';
-                input.maxLength = 18;
-            }
+        function validarEmail(email) {
+            if (!email) return true;
+            const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return regex.test(email);
         }
 
-        /* --- MANUTENÇÃO DE CLIENTES --- */
+        /* --- GERENCIAMENTO DE CLIENTES --- */
         async function carregarClientes() {
             const res = await fetch(`${API_URL}/clientes`);
             cacheClientes = await res.json();
@@ -368,7 +357,7 @@
                     <td>${c.email || '-'}</td>
                     <td>
                         <button class="btn btn-sm btn-edit" onclick="editarCliente(${c.id})">Editar</button>
-                        <button class="btn btn-sm btn-del" onclick="excluirItem('clientes', ${c.id})">Excluir</button>
+                        <button class="btn btn-sm btn-del" onclick="excluirCliente(${c.id})">Excluir</button>
                     </td>
                 </tr>`;
             });
@@ -376,20 +365,42 @@
 
         async function salvarCliente(e) {
             e.preventDefault();
+            
+            const emailInput = document.getElementById('cli_email').value.trim();
+
+            if (emailInput && !validarEmail(emailInput)) {
+                alert('Por favor, informe um e-mail válido (exemplo@dominio.com).');
+                document.getElementById('cli_email').focus();
+                return;
+            }
+
             const id = document.getElementById('cli_id').value;
             const payload = {
                 nome: document.getElementById('cli_nome').value,
                 cpf_cnpj: document.getElementById('cli_cpf').value,
                 telefone: document.getElementById('cli_telefone').value,
-                email: document.getElementById('cli_email').value
+                email: emailInput
             };
 
             const url = id ? `${API_URL}/clientes/${id}` : `${API_URL}/clientes`;
             const method = id ? 'PUT' : 'POST';
 
-            await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            resetFormCliente();
-            carregarClientes();
+            try {
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    resetFormCliente();
+                    carregarClientes();
+                } else {
+                    alert('Erro ao salvar o cliente.');
+                }
+            } catch (err) {
+                console.error('Erro na requisição:', err);
+            }
         }
 
         function editarCliente(id) {
@@ -412,106 +423,53 @@
             document.getElementById('btnSalvarCliente').innerText = 'Salvar Cliente';
         }
 
-        /* --- MANUTENÇÃO DE FORNECEDORES --- */
-        async function carregarFornecedores() {
-            const res = await fetch(`${API_URL}/fornecedores`);
-            cacheFornecedores = await res.json();
-            renderTabelaFornecedores(cacheFornecedores);
-            
-            const selectProd = document.getElementById('prod_fornecedor');
-            selectProd.innerHTML = '<option value="">Selecione...</option>';
-            cacheFornecedores.forEach(f => selectProd.innerHTML += `<option value="${f.id}">${f.nome_fantasia}</option>`);
+        async function excluirCliente(id) {
+            if (!confirm('Deseja realmente excluir este cliente?')) return;
+            const res = await fetch(`${API_URL}/clientes/${id}`, { method: 'DELETE' });
+            if (res.ok) carregarClientes();
+            else alert('Erro ao excluir cliente.');
         }
 
-        function renderTabelaFornecedores(lista) {
+        /* --- OUTRAS SEÇÕES (PADRÃO) --- */
+        async function carregarFornecedores() {
+            const res = await fetch(`${API_URL}/fornecedores`);
+            const dados = await res.json();
             const tbody = document.querySelector('#tblFornecedores tbody');
+            const selectProd = document.getElementById('prod_fornecedor');
             tbody.innerHTML = '';
-            lista.forEach(f => {
-                tbody.innerHTML += `<tr>
-                    <td>${f.id}</td>
-                    <td>${f.nome_fantasia}</td>
-                    <td>${f.cnpj || '-'}</td>
-                    <td>${f.telefone || '-'}</td>
-                    <td>${f.email || '-'}</td>
-                    <td>
-                        <button class="btn btn-sm btn-edit" onclick="editarFornecedor(${f.id})">Editar</button>
-                        <button class="btn btn-sm btn-del" onclick="excluirItem('fornecedores', ${f.id})">Excluir</button>
-                    </td>
-                </tr>`;
+            selectProd.innerHTML = '<option value="">Selecione...</option>';
+            
+            dados.forEach(f => {
+                tbody.innerHTML += `<tr><td>${f.id}</td><td>${f.nome_fantasia}</td><td>${f.cnpj}</td><td>${f.telefone || '-'}</td><td>${f.email || '-'}</td></tr>`;
+                selectProd.innerHTML += `<option value="${f.id}">${f.nome_fantasia}</option>`;
             });
         }
 
-        async function salvarFornecedor(e) {
+        async function cadastrarFornecedor(e) {
             e.preventDefault();
-            const id = document.getElementById('for_id').value;
             const payload = {
                 nome_fantasia: document.getElementById('for_nome').value,
                 cnpj: document.getElementById('for_cnpj').value,
                 telefone: document.getElementById('for_telefone').value,
                 email: document.getElementById('for_email').value
             };
-
-            const url = id ? `${API_URL}/fornecedores/${id}` : `${API_URL}/fornecedores`;
-            const method = id ? 'PUT' : 'POST';
-
-            await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            resetFormFornecedor();
+            await fetch(`${API_URL}/fornecedores`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            document.getElementById('formFornecedor').reset();
             carregarFornecedores();
         }
 
-        function editarFornecedor(id) {
-            const f = cacheFornecedores.find(item => item.id === id);
-            if (!f) return;
-            document.getElementById('for_id').value = f.id;
-            document.getElementById('for_nome').value = f.nome_fantasia;
-            document.getElementById('for_cnpj').value = f.cnpj || '';
-            document.getElementById('for_telefone').value = f.telefone || '';
-            document.getElementById('for_email').value = f.email || '';
-            
-            document.getElementById('titleFormFornecedor').innerText = 'Editar Fornecedor';
-            document.getElementById('btnSalvarFornecedor').innerText = 'Atualizar Fornecedor';
-        }
-
-        function resetFormFornecedor() {
-            document.getElementById('formFornecedor').reset();
-            document.getElementById('for_id').value = '';
-            document.getElementById('titleFormFornecedor').innerText = 'Cadastrar Fornecedor';
-            document.getElementById('btnSalvarFornecedor').innerText = 'Salvar Fornecedor';
-        }
-
-        /* --- MANUTENÇÃO E PESQUISA DE PRODUTOS --- */
         async function carregarProdutos() {
             const res = await fetch(`${API_URL}/produtos`);
             cacheProdutos = await res.json();
-            renderTabelaProdutos(cacheProdutos);
-        }
-
-        function renderTabelaProdutos(lista) {
             const tbody = document.querySelector('#tblProdutos tbody');
             tbody.innerHTML = '';
-            lista.forEach(p => {
-                tbody.innerHTML += `<tr>
-                    <td>${p.id}</td>
-                    <td>${p.nome}</td>
-                    <td>R$ ${parseFloat(p.preco_custo).toFixed(2)}</td>
-                    <td>R$ ${parseFloat(p.preco_venda).toFixed(2)}</td>
-                    <td>${p.estoque_atual}</td>
-                    <td>
-                        <button class="btn btn-sm btn-edit" onclick="editarProduto(${p.id})">Editar</button>
-                        <button class="btn btn-sm btn-del" onclick="excluirItem('produtos', ${p.id})">Excluir</button>
-                    </td>
-                </tr>`;
+            cacheProdutos.forEach(p => {
+                tbody.innerHTML += `<tr><td>${p.id}</td><td>${p.nome}</td><td>R$ ${p.preco_custo.toFixed(2)}</td><td>R$ ${p.preco_venda.toFixed(2)}</td><td>${p.estoque_atual}</td></tr>`;
             });
         }
 
-        function filtrarProdutos(termo) {
-            const filtrados = cacheProdutos.filter(p => p.nome.toLowerCase().includes(termo.toLowerCase()));
-            renderTabelaProdutos(filtrados);
-        }
-
-        async function salvarProduto(e) {
+        async function cadastrarProduto(e) {
             e.preventDefault();
-            const id = document.getElementById('prod_id').value;
             const payload = {
                 nome: document.getElementById('prod_nome').value,
                 preco_custo: parseFloat(document.getElementById('prod_custo').value),
@@ -519,52 +477,12 @@
                 estoque_atual: parseInt(document.getElementById('prod_estoque').value),
                 fornecedor_id: document.getElementById('prod_fornecedor').value || null
             };
-
-            const url = id ? `${API_URL}/produtos/${id}` : `${API_URL}/produtos`;
-            const method = id ? 'PUT' : 'POST';
-
-            await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            resetFormProduto();
+            await fetch(`${API_URL}/produtos`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            document.getElementById('formProduto').reset();
             carregarProdutos();
             carregarRelatorioEstoque();
         }
 
-        function editarProduto(id) {
-            const p = cacheProdutos.find(item => item.id === id);
-            if (!p) return;
-            document.getElementById('prod_id').value = p.id;
-            document.getElementById('prod_nome').value = p.nome;
-            document.getElementById('prod_custo').value = p.preco_custo;
-            document.getElementById('prod_venda').value = p.preco_venda;
-            document.getElementById('prod_estoque').value = p.estoque_atual;
-            document.getElementById('prod_fornecedor').value = p.fornecedor_id || '';
-            
-            document.getElementById('titleFormProduto').innerText = 'Editar Produto';
-            document.getElementById('btnSalvarProduto').innerText = 'Atualizar Produto';
-        }
-
-        function resetFormProduto() {
-            document.getElementById('formProduto').reset();
-            document.getElementById('prod_id').value = '';
-            document.getElementById('titleFormProduto').innerText = 'Cadastrar Produto';
-            document.getElementById('btnSalvarProduto').innerText = 'Salvar Produto';
-        }
-
-        /* --- EXCLUSÃO GENÉRICA DE CADASTROS --- */
-        async function excluirItem(entidade, id) {
-            if (!confirm(`Deseja realmente excluir este registro (${entidade})?`)) return;
-            
-            const res = await fetch(`${API_URL}/${entidade}/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                if (entidade === 'clientes') carregarClientes();
-                if (entidade === 'fornecedores') carregarFornecedores();
-                if (entidade === 'produtos') { carregarProdutos(); carregarRelatorioEstoque(); }
-            } else {
-                alert('Erro ao excluir registro.');
-            }
-        }
-
-        /* --- DEMAIS RECURSOS (CONTAS, VENDAS, ESTOQUE) --- */
         async function carregarContas() {
             const res = await fetch(`${API_URL}/contas`);
             const dados = await res.json();
@@ -573,14 +491,7 @@
             
             dados.forEach(c => {
                 const badgeClass = c.status === 'PAGO' ? 'badge-pago' : 'badge-pendente';
-                tbody.innerHTML += `<tr>
-                    <td>${c.id}</td>
-                    <td><strong>${c.tipo}</strong></td>
-                    <td>${c.descricao}</td>
-                    <td>R$ ${parseFloat(c.valor).toFixed(2)}</td>
-                    <td>${c.data_vencimento}</td>
-                    <td><span class="badge ${badgeClass}">${c.status}</span></td>
-                </tr>`;
+                tbody.innerHTML += `<tr><td>${c.id}</td><td><strong>${c.tipo}</strong></td><td>${c.descricao}</td><td>R$ ${parseFloat(c.valor).toFixed(2)}</td><td>${c.data_vencimento}</td><td><span class="badge ${badgeClass}">${c.status}</span></td></tr>`;
             });
         }
 
@@ -650,12 +561,7 @@
             const tbody = document.querySelector('#tblEstoque tbody');
             tbody.innerHTML = '';
             dados.forEach(p => {
-                tbody.innerHTML += `<tr>
-                    <td>${p.id}</td>
-                    <td>${p.nome}</td>
-                    <td><strong>${p.estoque_atual}</strong></td>
-                    <td>R$ ${parseFloat(p.preco_venda).toFixed(2)}</td>
-                </tr>`;
+                tbody.innerHTML += `<tr><td>${p.id}</td><td>${p.nome}</td><td><strong>${p.estoque_atual}</strong></td><td>R$ ${parseFloat(p.preco_venda).toFixed(2)}</td></tr>`;
             });
         }
     </script>
