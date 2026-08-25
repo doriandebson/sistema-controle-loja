@@ -249,7 +249,7 @@
         <section id="sec-contas" class="section-panel">
             <div class="page-header">
                 <h2>Contas a Pagar e Receber</h2>
-                <p>Lançamento manual de títulos financeiros.</p>
+                <p>Lançamento manual e títulos financeiros gerados por vendas.</p>
             </div>
             <div class="card">
                 <h3 class="card-title">Lançamento de Conta</h3>
@@ -369,6 +369,7 @@
         let cacheClientes = [];
         let cacheFornecedores = [];
         let cacheProdutos = [];
+        let cacheContas = [];
 
         window.onload = () => carregarDadosIniciais();
 
@@ -377,12 +378,23 @@
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             
             document.getElementById(`sec-${secao}`).classList.add('active');
-            if (event) event.target.classList.add('active');
+
+            if (event) {
+                event.target.classList.add('active');
+            } else {
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    if (btn.getAttribute('onclick').includes(`'${secao}'`)) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
 
             if (secao === 'vendas') {
                 carregarSelectProdutos();
                 carregarClientes();
                 carregarRelatorioEstoque();
+            } else if (secao === 'contas') {
+                carregarContas();
             }
         }
 
@@ -464,13 +476,17 @@
 
         /* --- CLIENTES --- */
         async function carregarClientes() {
-            const res = await fetch(`${API_URL}/clientes`);
-            cacheClientes = await res.json();
-            renderTabelaClientes(cacheClientes);
-            
-            const selectVenda = document.getElementById('venda_cliente');
-            selectVenda.innerHTML = '<option value="">Selecione...</option>';
-            cacheClientes.forEach(c => selectVenda.innerHTML += `<option value="${c.id}">${c.nome}</option>`);
+            try {
+                const res = await fetch(`${API_URL}/clientes`);
+                cacheClientes = await res.json();
+                renderTabelaClientes(cacheClientes);
+                
+                const selectVenda = document.getElementById('venda_cliente');
+                selectVenda.innerHTML = '<option value="">Selecione...</option>';
+                cacheClientes.forEach(c => selectVenda.innerHTML += `<option value="${c.id}">${c.nome}</option>`);
+            } catch (err) {
+                console.error("Erro ao carregar clientes:", err);
+            }
         }
 
         function renderTabelaClientes(lista) {
@@ -550,15 +566,19 @@
 
         /* --- FORNECEDORES --- */
         async function carregarFornecedores() {
-            const res = await fetch(`${API_URL}/fornecedores`);
-            cacheFornecedores = await res.json();
-            renderTabelaFornecedores(cacheFornecedores);
+            try {
+                const res = await fetch(`${API_URL}/fornecedores`);
+                cacheFornecedores = await res.json();
+                renderTabelaFornecedores(cacheFornecedores);
 
-            const selectProd = document.getElementById('prod_fornecedor');
-            selectProd.innerHTML = '<option value="">Selecione...</option>';
-            cacheFornecedores.forEach(f => {
-                selectProd.innerHTML += `<option value="${f.id}">${f.nome_fantasia}</option>`;
-            });
+                const selectProd = document.getElementById('prod_fornecedor');
+                selectProd.innerHTML = '<option value="">Selecione...</option>';
+                cacheFornecedores.forEach(f => {
+                    selectProd.innerHTML += `<option value="${f.id}">${f.nome_fantasia}</option>`;
+                });
+            } catch (err) {
+                console.error("Erro ao carregar fornecedores:", err);
+            }
         }
 
         function renderTabelaFornecedores(lista) {
@@ -654,24 +674,32 @@
 
         /* --- PRODUTOS --- */
         async function carregarProdutos() {
-            const res = await fetch(`${API_URL}/produtos`);
-            cacheProdutos = await res.json();
+            try {
+                const res = await fetch(`${API_URL}/produtos`);
+                cacheProdutos = await res.json();
+                renderTabelaProdutos(cacheProdutos);
+            } catch (err) {
+                console.error("Erro ao carregar produtos:", err);
+            }
+        }
+
+        function renderTabelaProdutos(lista) {
             const tbody = document.querySelector('#tblProdutos tbody');
             tbody.innerHTML = '';
-            cacheProdutos.forEach(p => {
+            lista.forEach(p => {
                 tbody.innerHTML += `<tr>
                     <td>${p.id}</td>
                     <td>${p.codigo_barras || '-'}</td>
                     <td>${p.nome}</td>
-                    <td>R$ ${(p.preco_custo || 0).toFixed(2)}</td>
-                    <td>R$ ${(p.preco_venda || 0).toFixed(2)}</td>
-                    <td>${p.estoque || 0}</td>
+                    <td>R$ ${parseFloat(p.preco_custo).toFixed(2)}</td>
+                    <td>R$ ${parseFloat(p.preco_venda).toFixed(2)}</td>
+                    <td>${p.estoque}</td>
                     <td>
-                        <button class="btn btn-sm" onclick="abrirModalEstoque(${p.id})">Ajustar Estoque</button>
+                        <button class="btn btn-sm btn-edit" onclick="abrirModalEstoque(${p.id})">Ajustar Estoque</button>
+                        <button class="btn btn-sm btn-del" onclick="excluirProduto(${p.id})">Excluir</button>
                     </td>
                 </tr>`;
             });
-            carregarSelectProdutos();
         }
 
         async function cadastrarProduto(e) {
@@ -684,12 +712,30 @@
                 estoque: parseInt(document.getElementById('prod_estoque').value),
                 fornecedor_id: document.getElementById('prod_fornecedor').value || null
             };
-            await fetch(`${API_URL}/produtos`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            document.getElementById('formProduto').reset();
-            carregarProdutos();
-            carregarRelatorioEstoque();
+
+            const res = await fetch(`${API_URL}/produtos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                document.getElementById('formProduto').reset();
+                carregarProdutos();
+                carregarRelatorioEstoque();
+            } else {
+                alert('Erro ao cadastrar produto.');
+            }
         }
 
+        async function excluirProduto(id) {
+            if (!confirm('Deseja excluir este produto?')) return;
+            const res = await fetch(`${API_URL}/produtos/${id}`, { method: 'DELETE' });
+            if (res.ok) carregarProdutos();
+            else alert('Erro ao excluir produto.');
+        }
+
+        /* --- MODAL ESTOQUE --- */
         function abrirModalEstoque(id) {
             document.getElementById('modal_prod_id').value = id;
             document.getElementById('modalEstoque').style.display = 'flex';
@@ -702,12 +748,12 @@
         async function confirmarAjusteEstoque() {
             const id = document.getElementById('modal_prod_id').value;
             const tipo = document.getElementById('modal_tipo_ajuste').value;
-            const quantidade = parseInt(document.getElementById('modal_qtd_ajuste').value);
+            const qtd = parseInt(document.getElementById('modal_qtd_ajuste').value);
 
             const res = await fetch(`${API_URL}/produtos/${id}/estoque`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tipo, quantidade })
+                body: JSON.stringify({ tipo, quantidade: qtd })
             });
 
             if (res.ok) {
@@ -719,20 +765,27 @@
             }
         }
 
-        /* --- CONTAS --- */
+        /* --- CONTAS PAGAR / RECEBER --- */
         async function carregarContas() {
-            const res = await fetch(`${API_URL}/contas`);
-            const dados = await res.json();
+            try {
+                const res = await fetch(`${API_URL}/contas`);
+                cacheContas = await res.json();
+                renderTabelaContas(cacheContas);
+            } catch (err) {
+                console.error("Erro ao carregar contas:", err);
+            }
+        }
+
+        function renderTabelaContas(lista) {
             const tbody = document.querySelector('#tblContas tbody');
             tbody.innerHTML = '';
-            
-            dados.forEach(c => {
+            lista.forEach(c => {
                 const badgeClass = c.status === 'PAGO' ? 'badge-pago' : 'badge-pendente';
                 tbody.innerHTML += `<tr>
                     <td>${c.id}</td>
-                    <td><strong>${c.tipo}</strong></td>
+                    <td>${c.tipo}</td>
                     <td>${c.descricao}</td>
-                    <td>R$ ${(c.valor || 0).toFixed(2)}</td>
+                    <td>R$ ${parseFloat(c.valor).toFixed(2)}</td>
                     <td>${c.vencimento}</td>
                     <td><span class="badge ${badgeClass}">${c.status}</span></td>
                 </tr>`;
@@ -748,25 +801,36 @@
                 vencimento: document.getElementById('conta_vencimento').value,
                 status: document.getElementById('conta_status').value
             };
-            await fetch(`${API_URL}/contas`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            document.getElementById('formConta').reset();
-            carregarContas();
+
+            const res = await fetch(`${API_URL}/contas`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                document.getElementById('formConta').reset();
+                carregarContas();
+            } else {
+                alert('Erro ao lançar conta.');
+            }
         }
 
-        /* --- VENDAS --- */
+        /* --- VENDAS & ESTOQUE --- */
         function carregarSelectProdutos() {
-            const selectVenda = document.getElementById('venda_produto');
-            selectVenda.innerHTML = '<option value="">Selecione...</option>';
+            const select = document.getElementById('venda_produto');
+            select.innerHTML = '<option value="">Selecione...</option>';
             cacheProdutos.forEach(p => {
-                const rotulo = p.codigo_barras ? `[${p.codigo_barras}] ${p.nome}` : p.nome;
-                selectVenda.innerHTML += `<option value="${p.id}">${rotulo}</option>`;
+                select.innerHTML += `<option value="${p.id}">${p.nome} (Estoque: ${p.estoque})</option>`;
             });
         }
 
         function atualizarPrecoProduto() {
-            const id = document.getElementById('venda_produto').value;
-            const prod = cacheProdutos.find(p => p.id == id);
-            if (prod) document.getElementById('venda_preco').value = prod.preco_venda;
+            const prodId = document.getElementById('venda_produto').value;
+            const p = cacheProdutos.find(item => item.id == prodId);
+            if (p) {
+                document.getElementById('venda_preco').value = p.preco_venda;
+            }
         }
 
         async function emitirVenda(e) {
@@ -777,32 +841,34 @@
                 quantidade: parseInt(document.getElementById('venda_qtd').value),
                 preco_unitario: parseFloat(document.getElementById('venda_preco').value),
                 forma_pagamento: document.getElementById('venda_pagamento').value,
-                status: document.getElementById('venda_status').value
+                status_pagamento: document.getElementById('venda_status').value
             };
 
-            const res = await fetch(`${API_URL}/vendas`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            const res = await fetch(`${API_URL}/vendas`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
             if (res.ok) {
-                alert('Venda emitida com sucesso!');
+                alert('Venda realizada com sucesso!');
                 document.getElementById('formVenda').reset();
                 carregarProdutos();
-                carregarContas();
                 carregarRelatorioEstoque();
             } else {
                 alert('Erro ao emitir venda.');
             }
         }
 
-        async function carregarRelatorioEstoque() {
-            const res = await fetch(`${API_URL}/relatorios/estoque`);
-            const dados = await res.json();
+        function carregarRelatorioEstoque() {
             const tbody = document.querySelector('#tblEstoque tbody');
             tbody.innerHTML = '';
-            dados.forEach(p => {
+            cacheProdutos.forEach(p => {
                 tbody.innerHTML += `<tr>
-                    <td>${p.codigo_barras || p.id}</td>
+                    <td>${p.codigo_barras || '-'}</td>
                     <td>${p.nome}</td>
-                    <td>${p.estoque || 0}</td>
-                    <td>R$ ${(p.preco_venda || 0).toFixed(2)}</td>
+                    <td>${p.estoque}</td>
+                    <td>R$ ${parseFloat(p.preco_venda).toFixed(2)}</td>
                 </tr>`;
             });
         }
