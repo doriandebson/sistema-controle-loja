@@ -1,656 +1,14 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Loja</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { display: flex; background-color: #f4f6f9; min-height: 100vh; color: #333; }
-
-        /* Sidebar */
-        #sidebar { width: 250px; background-color: #1a2a52; color: #fff; padding: 20px 0; display: flex; flex-direction: column; flex-shrink: 0; }
-        #sidebar h1 { font-size: 1.3rem; padding: 0 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        #sidebar nav { margin-top: 20px; flex-grow: 1; }
-        #sidebar nav button { display: block; width: 100%; text-align: left; padding: 12px 20px; background: none; border: none; color: #cfd8dc; font-size: 0.95rem; cursor: pointer; transition: 0.2s; }
-        #sidebar nav button:hover, #sidebar nav button.active { background-color: #2c3e6b; color: #fff; font-weight: bold; }
-
-        /* Main */
-        #main-content { flex-grow: 1; padding: 30px; overflow-y: auto; }
-        .section-panel { display: none; }
-        .section-panel.active { display: block; }
-        .page-header { margin-bottom: 25px; }
-        .page-header h2 { font-size: 1.5rem; color: #1a2a52; }
-        .page-header p { color: #666; font-size: 0.9rem; margin-top: 4px; }
-
-        /* Cards e Forms */
-        .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .card-title { font-size: 1.1rem; margin-bottom: 15px; color: #1a2a52; border-bottom: 1px solid #eee; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
-        .form-group { display: flex; flex-direction: column; }
-        .form-group.full-width { grid-column: 1 / -1; }
-        .form-group label { font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: #444; }
-        .form-group input, .form-group select, .form-group textarea { padding: 9px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
-        .form-group textarea { resize: vertical; min-height: 60px; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #1a2a52; outline: none; }
-
-        /* Botões */
-        .btn { padding: 9px 18px; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; background: #1a2a52; color: #fff; }
-        .btn:hover { background: #2c3e6b; }
-        .btn-secondary { background: #6c757d; }
-        .btn-secondary:hover { background: #5a6268; }
-        .btn-sm { padding: 5px 10px; font-size: 0.8rem; margin-right: 5px; }
-        .btn-edit { background: #ffc107; color: #000; }
-        .btn-edit:hover { background: #e0a800; }
-        .btn-stock { background: #17a2b8; color: #fff; }
-        .btn-stock:hover { background: #138496; }
-        .btn-del { background: #dc3545; color: #fff; }
-        .btn-del:hover { background: #c82333; }
-
-        /* Tabelas */
-        .table-responsive { overflow-x: auto; margin-top: 15px; }
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
-        table th, table td { padding: 12px; border-bottom: 1px solid #eee; }
-        table th { background-color: #f8f9fa; color: #555; }
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
-        .badge-pago { background: #d4edda; color: #155724; }
-        .badge-pendente { background: #fff3cd; color: #856404; }
-
-        /* Modal Simple */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-overlay.active { display: flex; }
-        .modal-body { background: #fff; padding: 25px; border-radius: 8px; width: 100%; max-width: 400px; }
-    </style>
-</head>
-<body>
-
-    <aside id="sidebar">
-        <h1>Controle de Loja</h1>
-        <nav>
-            <button class="nav-btn active" onclick="navegarPara('clientes', event)">👥 Clientes</button>
-            <button class="nav-btn" onclick="navegarPara('fornecedores', event)">🏢 Fornecedores</button>
-            <button class="nav-btn" onclick="navegarPara('produtos', event)">📦 Produtos</button>
-            <button class="nav-btn" onclick="navegarPara('contas', event)">💰 Contas Pagar / Receber</button>
-            <button class="nav-btn" onclick="navegarPara('vendas', event)">🛒 Vendas & Estoque</button>
-        </nav>
-    </aside>
-
-    <main id="main-content">
-        <!-- CLIENTES -->
-        <section id="sec-clientes" class="section-panel active">
-            <div class="page-header">
-                <h2>Gerenciamento de Clientes</h2>
-                <p>Cadastre, edite e remova clientes da loja.</p>
-            </div>
-            <div class="card">
-                <h3 class="card-title" id="titleFormCliente">Cadastrar Cliente</h3>
-                <form id="formCliente" onsubmit="salvarCliente(event)">
-                    <input type="hidden" id="cli_id">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Nome *</label>
-                            <input type="text" id="cli_nome" required>
-                        </div>
-                        <div class="form-group">
-                            <label>CPF *</label>
-                            <input type="text" id="cli_cpf" placeholder="000.000.000-00" oninput="mascaraCPF(this)" maxlength="14" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Telefone</label>
-                            <input type="text" id="cli_telefone" placeholder="(00) 90000-0000" oninput="mascaraTelefone(this)" maxlength="15">
-                        </div>
-                        <div class="form-group">
-                            <label>E-mail</label>
-                            <input type="email" id="cli_email" placeholder="exemplo@email.com">
-                        </div>
-                    </div>
-                    <button type="submit" class="btn" id="btnSalvarCliente">Salvar Cliente</button>
-                    <button type="button" class="btn btn-secondary" onclick="resetFormCliente()">Cancelar</button>
-                </form>
-            </div>
-            <div class="card">
-                <h3 class="card-title">Clientes Cadastrados</h3>
-                <div class="table-responsive">
-                    <table id="tblClientes">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nome</th>
-                                <th>CPF</th>
-                                <th>Telefone</th>
-                                <th>E-mail</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- FORNECEDORES -->
-        <section id="sec-fornecedores" class="section-panel">
-            <div class="page-header">
-                <h2>Gerenciamento de Fornecedores</h2>
-                <p>Cadastre e gerencie fornecedores parceiros.</p>
-            </div>
-            <div class="card">
-                <h3 class="card-title" id="titleFormFornecedor">Cadastrar Fornecedor</h3>
-                <form id="formFornecedor" onsubmit="salvarFornecedor(event)">
-                    <input type="hidden" id="for_id">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Nome / Razão Social *</label>
-                            <input type="text" id="for_nome" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Tipo de Documento *</label>
-                            <select id="for_tipo_doc" onchange="alterarTipoDocFornecedor()">
-                                <option value="CNPJ">CNPJ</option>
-                                <option value="CPF">CPF</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label id="lbl_for_doc">CNPJ *</label>
-                            <input type="text" id="for_cnpj" placeholder="00.000.000/0000-00" oninput="mascaraCPFCNPJ(this)" maxlength="18" required>
-                        </div>
-                        <div class="form-group" id="grp_for_ie">
-                            <label>Inscrição Estadual (IE)</label>
-                            <input type="text" id="for_ie" placeholder="Isento ou nº IE">
-                        </div>
-                        <div class="form-group">
-                            <label>Telefone</label>
-                            <input type="text" id="for_telefone" placeholder="(00) 90000-0000" oninput="mascaraTelefone(this)" maxlength="15">
-                        </div>
-                        <div class="form-group">
-                            <label>E-mail</label>
-                            <input type="email" id="for_email" placeholder="fornecedor@email.com">
-                        </div>
-                        <div class="form-group">
-                            <label>Pessoa de Contato</label>
-                            <input type="text" id="for_contato" placeholder="Nome do representante/vendedor">
-                        </div>
-                        <div class="form-group full-width">
-                            <label>Observações</label>
-                            <textarea id="for_obs" placeholder="Informações adicionais, condições de pagamento, horários de entrega..."></textarea>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn" id="btnSalvarFornecedor">Salvar Fornecedor</button>
-                    <button type="button" class="btn btn-secondary" onclick="resetFormFornecedor()">Cancelar</button>
-                </form>
-            </div>
-            <div class="card">
-                <h3 class="card-title">Fornecedores Cadastrados</h3>
-                <div class="table-responsive">
-                    <table id="tblFornecedores">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nome / Razão Social</th>
-                                <th>CPF / CNPJ</th>
-                                <th>IE</th>
-                                <th>Telefone</th>
-                                <th>E-mail</th>
-                                <th>Contato</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- PRODUTOS -->
-        <section id="sec-produtos" class="section-panel">
-            <div class="page-header">
-                <h2>Gerenciamento de Produtos</h2>
-                <p>Cadastro, consulta e atualização rápida de estoque.</p>
-            </div>
-            <div class="card">
-                <h3 class="card-title" id="titleFormProduto">Cadastrar Produto</h3>
-                <form id="formProduto" onsubmit="salvarProduto(event)">
-                    <input type="hidden" id="prod_id">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Código / Ref. / EAN</label>
-                            <input type="text" id="prod_codigo" placeholder="Ex: PROD-001 ou 7891234567890">
-                        </div>
-                        <div class="form-group">
-                            <label>Nome do Produto *</label>
-                            <input type="text" id="prod_nome" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Preço de Custo (R$) *</label>
-                            <input type="number" step="0.01" id="prod_custo" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Preço de Venda (R$) *</label>
-                            <input type="number" step="0.01" id="prod_venda" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Estoque Inicial / Atual *</label>
-                            <input type="number" id="prod_estoque" value="0" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Fornecedor</label>
-                            <select id="prod_fornecedor"><option value="">Selecione...</option></select>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn" id="btnSalvarProduto">Salvar Produto</button>
-                    <button type="button" class="btn btn-secondary" onclick="resetFormProduto()">Cancelar</button>
-                </form>
-            </div>
-
-            <div class="card">
-                <div class="card-title">
-                    <span>Produtos Cadastrados</span>
-                    <input type="text" id="buscaProduto" placeholder="🔍 Buscar por código ou nome..." oninput="filtrarProdutos(this.value)" style="padding: 6px 12px; font-size: 0.85rem; width: 260px; border-radius: 4px; border: 1px solid #ccc;">
-                </div>
-                <div class="table-responsive">
-                    <table id="tblProdutos">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Código</th>
-                                <th>Nome</th>
-                                <th>Preço Custo</th>
-                                <th>Preço Venda</th>
-                                <th>Estoque</th>
-                                <th>Fornecedor</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- CONTAS PAGAR / RECEBER -->
-        <section id="sec-contas" class="section-panel">
-            <div class="page-header">
-                <h2>Contas a Pagar e Receber</h2>
-                <p>Lançamento manual de títulos financeiros.</p>
-            </div>
-            <div class="card">
-                <h3 class="card-title">Lançamento de Conta</h3>
-                <form id="formConta" onsubmit="cadastrarConta(event)">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Tipo de Conta *</label>
-                            <select id="conta_tipo" required>
-                                <option value="PAGAR">A Pagar (Despesa)</option>
-                                <option value="RECEBER">A Receber (Receita)</option>
-                            </select>
-                        </div>
-                        <div class="form-group"><label>Descrição *</label><input type="text" id="conta_desc" required></div>
-                        <div class="form-group"><label>Valor (R$) *</label><input type="number" step="0.01" id="conta_valor" required></div>
-                        <div class="form-group"><label>Data de Vencimento *</label><input type="date" id="conta_vencimento" required></div>
-                        <div class="form-group">
-                            <label>Status *</label>
-                            <select id="conta_status" required>
-                                <option value="PENDENTE">Pendente</option>
-                                <option value="PAGO">Pago</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn">Lançar Conta</button>
-                </form>
-            </div>
-            <div class="card">
-                <h3 class="card-title">Listagem de Contas</h3>
-                <div class="table-responsive">
-                    <table id="tblContas">
-                        <thead><tr><th>ID</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- VENDAS E ESTOQUE -->
-        <section id="sec-vendas" class="section-panel">
-            <div class="page-header">
-                <h2>Emissão de Venda & Relatório de Estoque</h2>
-                <p>Registre vendas e acompanhe o estoque.</p>
-            </div>
-            <div class="card">
-                <h3 class="card-title">Emitir Venda</h3>
-                <form id="formVenda" onsubmit="emitirVenda(event)">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Cliente</label>
-                            <select id="venda_cliente" required><option value="">Selecione...</option></select>
-                        </div>
-                        <div class="form-group">
-                            <label>Produto</label>
-                            <select id="venda_produto" required onchange="atualizarPrecoProduto()"><option value="">Selecione...</option></select>
-                        </div>
-                        <div class="form-group"><label>Quantidade *</label><input type="number" id="venda_qtd" min="1" value="1" required></div>
-                        <div class="form-group"><label>Preço Unitário (R$) *</label><input type="number" step="0.01" id="venda_preco" required></div>
-                        <div class="form-group">
-                            <label>Forma de Pagamento *</label>
-                            <select id="venda_pagamento" required>
-                                <option value="Pix">Pix</option>
-                                <option value="Dinheiro">Dinheiro</option>
-                                <option value="Cartão de Crédito">Cartão de Crédito</option>
-                                <option value="Cartão de Débito">Cartão de Débito</option>
-                                <option value="Boleto">Boleto</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Status do Pagamento *</label>
-                            <select id="venda_status" required>
-                                <option value="PAGO">Pago (Quitado)</option>
-                                <option value="PENDENTE">Pendente (A Receber)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn">Finalizar Venda</button>
-                </form>
-            </div>
-            <div class="card">
-                <h3 class="card-title">Relatório de Posição de Estoque</h3>
-                <div class="table-responsive">
-                    <table id="tblEstoque">
-                        <thead><tr><th>Código</th><th>Produto</th><th>Estoque Atual</th><th>Preço Venda</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- MODAL DE ATUALIZAÇÃO RÁPIDA DE ESTOQUE -->
-    <div id="modalEstoque" class="modal-overlay">
-        <div class="modal-body">
-            <h3 style="margin-bottom: 15px; color: #1a2a52;">Atualizar Estoque</h3>
-            <p id="modalNomeProduto" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 15px; color: #555;"></p>
-            <input type="hidden" id="modal_prod_id">
-            
-            <div class="form-group" style="margin-bottom: 12px;">
-                <label>Tipo de Ajuste</label>
-                <select id="modal_tipo_ajuste">
-                    <option value="SOMAR">Entrada (+ Somas à quantidade)</option>
-                    <option value="SUBTRAIR">Saída/Perda (- Subtrai da quantidade)</option>
-                    <option value="DEFINIR">Definir Novo Total Fixo</option>
-                </select>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 20px;">
-                <label>Quantidade</label>
-                <input type="number" id="modal_qtd_ajuste" min="1" value="1" required>
-            </div>
-
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button type="button" class="btn btn-secondary" onclick="fecharModalEstoque()">Cancelar</button>
-                <button type="button" class="btn" onclick="confirmarAjusteEstoque()">Confirmar Ajuste</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const API_URL = '/api';
-        let cacheClientes = [];
-        let cacheFornecedores = [];
-        let cacheProdutos = [];
-
-        window.onload = () => carregarDadosIniciais();
-
-        function navegarPara(secao, event) {
-            document.querySelectorAll('.section-panel').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            
-            document.getElementById(`sec-${secao}`).classList.add('active');
-            if (event) event.target.classList.add('active');
-
-            if (secao === 'vendas') {
-                carregarSelectProdutos();
-                carregarClientes();
-                carregarRelatorioEstoque();
-            }
-        }
-
-        function carregarDadosIniciais() {
-            carregarClientes();
-            carregarFornecedores();
-            carregarProdutos();
-            carregarContas();
-            carregarRelatorioEstoque();
-        }
-
-        /* --- MÁSCARAS E VALIDAÇÕES COMPARTILHADAS --- */
-        function mascaraCPF(input) {
-            let v = input.value.replace(/\D/g, "");
-            v = v.replace(/(\d{3})(\d)/, "$1.$2");
-            v = v.replace(/(\d{3})(\d)/, "$1.$2");
-            v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-            input.value = v;
-        }
-
-        function mascaraCPFCNPJ(input) {
-            let v = input.value.replace(/\D/g, "");
-            const tipo = document.getElementById('for_tipo_doc').value;
-
-            if (tipo === 'CPF') {
-                v = v.substring(0, 11);
-                v = v.replace(/(\d{3})(\d)/, "$1.$2");
-                v = v.replace(/(\d{3})(\d)/, "$1.$2");
-                v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-            } else {
-                v = v.substring(0, 14);
-                v = v.replace(/^(\d{2})(\d)/, "$1.$2");
-                v = v.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
-                v = v.replace(/\.(\d{3})(\d)/, ".$1/$2");
-                v = v.replace(/(\d{4})(\d)/, "$1-$2");
-            }
-            input.value = v;
-        }
-
-        function alterarTipoDocFornecedor() {
-            const tipo = document.getElementById('for_tipo_doc').value;
-            const input = document.getElementById('for_cnpj');
-            const label = document.getElementById('lbl_for_doc');
-            const grpIE = document.getElementById('grp_for_ie');
-
-            input.value = '';
-            if (tipo === 'CPF') {
-                label.innerText = 'CPF *';
-                input.placeholder = '000.000.000-00';
-                input.maxLength = 14;
-                grpIE.style.display = 'none';
-            } else {
-                label.innerText = 'CNPJ *';
-                input.placeholder = '00.000.000/0000-00';
-                input.maxLength = 18;
-                grpIE.style.display = 'flex';
-            }
-        }
-
-        function mascaraTelefone(input) {
-            let v = input.value.replace(/\D/g, "");
-            v = v.substring(0, 11);
-
-            if (v.length > 10) {
-                v = v.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
-            } else if (v.length > 5) {
-                v = v.replace(/^(\d{2})(\d{4})(\d{0,4})$/, "($1) $2-$3");
-            } else if (v.length > 2) {
-                v = v.replace(/^(\d{2})(\d{0,5})$/, "($1) $2");
-            }
-            input.value = v;
-        }
-
-        function validarEmail(email) {
-            if (!email) return true;
-            const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return regex.test(email);
-        }
-
-        /* --- GERENCIAMENTO DE CLIENTES --- */
-        async function carregarClientes() {
-            const res = await fetch(`${API_URL}/clientes`);
-            cacheClientes = await res.json();
-            renderTabelaClientes(cacheClientes);
-            
-            const selectVenda = document.getElementById('venda_cliente');
-            selectVenda.innerHTML = '<option value="">Selecione...</option>';
-            cacheClientes.forEach(c => selectVenda.innerHTML += `<option value="${c.id}">${c.nome}</option>`);
-        }
-
-        function renderTabelaClientes(lista) {
-            const tbody = document.querySelector('#tblClientes tbody');
-            tbody.innerHTML = '';
-            lista.forEach(c => {
-                tbody.innerHTML += `<tr>
-                    <td>${c.id}</td>
-                    <td>${c.nome}</td>
-                    <td>${c.cpf_cnpj || '-'}</td>
-                    <td>${c.telefone || '-'}</td>
-                    <td>${c.email || '-'}</td>
-                    <td>
-                        <button class="btn btn-sm btn-edit" onclick="editarCliente(${c.id})">Editar</button>
-                        <button class="btn btn-sm btn-del" onclick="excluirCliente(${c.id})">Excluir</button>
-                    </td>
-                </tr>`;
-            });
-        }
-
-        async function salvarCliente(e) {
-            e.preventDefault();
-            const emailInput = document.getElementById('cli_email').value.trim();
-
-            if (emailInput && !validarEmail(emailInput)) {
-                alert('Por favor, informe um e-mail válido.');
-                document.getElementById('cli_email').focus();
-                return;
-            }
-
-            const id = document.getElementById('cli_id').value;
-            const payload = {
-                nome: document.getElementById('cli_nome').value,
-                cpf_cnpj: document.getElementById('cli_cpf').value,
-                telefone: document.getElementById('cli_telefone').value,
-                email: emailInput
-            };
-
-            const url = id ? `${API_URL}/clientes/${id}` : `${API_URL}/clientes`;
-            const method = id ? 'PUT' : 'POST';
-
-            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (res.ok) {
-                resetFormCliente();
-                carregarClientes();
-            } else {
-                alert('Erro ao salvar cliente.');
-            }
-        }
-
-        function editarCliente(id) {
-            const c = cacheClientes.find(item => item.id === id);
-            if (!c) return;
-            document.getElementById('cli_id').value = c.id;
-            document.getElementById('cli_nome').value = c.nome;
-            document.getElementById('cli_cpf').value = c.cpf_cnpj || '';
-            document.getElementById('cli_telefone').value = c.telefone || '';
-            document.getElementById('cli_email').value = c.email || '';
-            
-            document.getElementById('titleFormCliente').innerText = 'Editar Cliente';
-            document.getElementById('btnSalvarCliente').innerText = 'Atualizar Cliente';
-        }
-
-        function resetFormCliente() {
-            document.getElementById('formCliente').reset();
-            document.getElementById('cli_id').value = '';
-            document.getElementById('titleFormCliente').innerText = 'Cadastrar Cliente';
-            document.getElementById('btnSalvarCliente').innerText = 'Salvar Cliente';
-        }
-
-        async function excluirCliente(id) {
-            if (!confirm('Deseja realmente excluir este cliente?')) return;
-            const res = await fetch(`${API_URL}/clientes/${id}`, { method: 'DELETE' });
-            if (res.ok) carregarClientes();
-            else alert('Erro ao excluir cliente.');
-        }
-
-        /* --- GERENCIAMENTO DE FORNECEDORES --- */
-        async function carregarFornecedores() {
-            const res = await fetch(`${API_URL}/fornecedores`);
-            cacheFornecedores = await res.json();
-            renderTabelaFornecedores(cacheFornecedores);
-
-            const selectProd = document.getElementById('prod_fornecedor');
-            selectProd.innerHTML = '<option value="">Selecione...</option>';
-            cacheFornecedores.forEach(f => {
-                selectProd.innerHTML += `<option value="${f.id}">${f.nome_fantasia}</option>`;
-            });
-        }
-
-        function renderTabelaFornecedores(lista) {
-            const tbody = document.querySelector('#tblFornecedores tbody');
-            tbody.innerHTML = '';
-            lista.forEach(f => {
-                tbody.innerHTML += `<tr>
-                    <td>${f.id}</td>
-                    <td>${f.nome_fantasia}</td>
-                    <td>${f.cnpj || '-'}</td>
-                    <td>${f.ie || '-'}</td>
-                    <td>${f.telefone || '-'}</td>
-                    <td>${f.email || '-'}</td>
-                    <td>${f.contato || '-'}</td>
-                    <td>
-                        <button class="btn btn-sm btn-edit" onclick="editarFornecedor(${f.id})">Editar</button>
-                        <button class="btn btn-sm btn-del" onclick="excluirFornecedor(${f.id})">Excluir</button>
-                    </td>
-                </tr>`;
-            });
-        }
-
-        async function salvarFornecedor(e) {
-            e.preventDefault();
-            const emailInput = document.getElementById('for_email').value.trim();
-
-            if (emailInput && !validarEmail(emailInput)) {
-                alert('Por favor, informe um e-mail válido.');
-                document.getElementById('for_email').focus();
-                return;
-            }
-
-            const id = document.getElementById('for_id').value;
-            const payload = {
-                nome_fantasia: document.getElementById('for_nome').value,
-                cnpj: document.getElementById('for_cnpj').value,
-                ie: document.getElementById('for_ie').value,
-                telefone: document.getElementById('for_telefone').value,
-                email: emailInput,
-                contato: document.getElementById('for_contato').value,
-                observacoes: document.getElementById('for_obs').value
-            };
-
-            const url = id ? `${API_URL}/fornecedores/${id}` : `${API_URL}/fornecedores`;
-            const method = id ? 'PUT' : 'POST';
-
-            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (res.ok) {
-                resetFormFornecedor();
-                carregarFornecedores();
-            } else {
-                alert('Erro ao salvar fornecedor.');
-            }
-        }
-
-        function editarFornecedor(id) {
+function editarFornecedor(id) {
             const f = cacheFornecedores.find(item => item.id === id);
             if (!f) return;
             document.getElementById('for_id').value = f.id;
             document.getElementById('for_nome').value = f.nome_fantasia;
             
             const doc = f.cnpj || '';
-            const isCPF = doc.replace(/\D/g, "").length <= 11;
+            const isCPF = doc.length <= 14;
             document.getElementById('for_tipo_doc').value = isCPF ? 'CPF' : 'CNPJ';
             alterarTipoDocFornecedor();
-
+            
             document.getElementById('for_cnpj').value = doc;
             document.getElementById('for_ie').value = f.ie || '';
             document.getElementById('for_telefone').value = f.telefone || '';
@@ -665,7 +23,6 @@
         function resetFormFornecedor() {
             document.getElementById('formFornecedor').reset();
             document.getElementById('for_id').value = '';
-            document.getElementById('for_tipo_doc').value = 'CNPJ';
             alterarTipoDocFornecedor();
             document.getElementById('titleFormFornecedor').innerText = 'Cadastrar Fornecedor';
             document.getElementById('btnSalvarFornecedor').innerText = 'Salvar Fornecedor';
@@ -689,17 +46,15 @@
             const tbody = document.querySelector('#tblProdutos tbody');
             tbody.innerHTML = '';
             lista.forEach(p => {
-                const f = cacheFornecedores.find(item => item.id == p.fornecedor_id);
-                const nomeFornecedor = f ? f.nome_fantasia : '-';
-
+                const fornec = cacheFornecedores.find(f => f.id === p.fornecedor_id);
                 tbody.innerHTML += `<tr>
                     <td>${p.id}</td>
-                    <td><strong>${p.codigo || '-'}</strong></td>
+                    <td>${p.codigo || '-'}</td>
                     <td>${p.nome}</td>
-                    <td>R$ ${parseFloat(p.preco_custo).toFixed(2)}</td>
-                    <td>R$ ${parseFloat(p.preco_venda).toFixed(2)}</td>
-                    <td><strong>${p.estoque_atual}</strong></td>
-                    <td>${nomeFornecedor}</td>
+                    <td>R$ ${parseFloat(p.preco_custo || 0).toFixed(2)}</td>
+                    <td>R$ ${parseFloat(p.preco_venda || 0).toFixed(2)}</td>
+                    <td><strong>${p.estoque}</strong></td>
+                    <td>${fornec ? fornec.nome_fantasia : '-'}</td>
                     <td>
                         <button class="btn btn-sm btn-stock" onclick="abrirModalEstoque(${p.id})">Estoque</button>
                         <button class="btn btn-sm btn-edit" onclick="editarProduto(${p.id})">Editar</button>
@@ -710,10 +65,9 @@
         }
 
         function filtrarProdutos(termo) {
-            const t = termo.toLowerCase().trim();
+            const t = termo.toLowerCase();
             const filtrados = cacheProdutos.filter(p => 
-                p.nome.toLowerCase().includes(t) || 
-                (p.codigo && p.codigo.toLowerCase().includes(t))
+                p.nome.toLowerCase().includes(t) || (p.codigo && p.codigo.toLowerCase().includes(t))
             );
             renderTabelaProdutos(filtrados);
         }
@@ -726,7 +80,7 @@
                 nome: document.getElementById('prod_nome').value,
                 preco_custo: parseFloat(document.getElementById('prod_custo').value),
                 preco_venda: parseFloat(document.getElementById('prod_venda').value),
-                estoque_atual: parseInt(document.getElementById('prod_estoque').value),
+                estoque: parseInt(document.getElementById('prod_estoque').value),
                 fornecedor_id: document.getElementById('prod_fornecedor').value || null
             };
 
@@ -737,7 +91,6 @@
             if (res.ok) {
                 resetFormProduto();
                 carregarProdutos();
-                carregarRelatorioEstoque();
             } else {
                 alert('Erro ao salvar produto.');
             }
@@ -751,7 +104,7 @@
             document.getElementById('prod_nome').value = p.nome;
             document.getElementById('prod_custo').value = p.preco_custo;
             document.getElementById('prod_venda').value = p.preco_venda;
-            document.getElementById('prod_estoque').value = p.estoque_atual;
+            document.getElementById('prod_estoque').value = p.estoque;
             document.getElementById('prod_fornecedor').value = p.fornecedor_id || '';
 
             document.getElementById('titleFormProduto').innerText = 'Editar Produto';
@@ -768,21 +121,16 @@
         async function excluirProduto(id) {
             if (!confirm('Deseja realmente excluir este produto?')) return;
             const res = await fetch(`${API_URL}/produtos/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                carregarProdutos();
-                carregarRelatorioEstoque();
-            } else {
-                alert('Erro ao excluir produto.');
-            }
+            if (res.ok) carregarProdutos();
+            else alert('Erro ao excluir produto.');
         }
 
-        /* --- MODAL DE ATUALIZAÇÃO RÁPIDA DE ESTOQUE --- */
+        /* --- AJUSTE RÁPIDO DE ESTOQUE (MODAL) --- */
         function abrirModalEstoque(id) {
             const p = cacheProdutos.find(item => item.id === id);
             if (!p) return;
-
             document.getElementById('modal_prod_id').value = p.id;
-            document.getElementById('modalNomeProduto').innerText = `Produto: ${p.nome} (Atual: ${p.estoque_atual})`;
+            document.getElementById('modalNomeProduto').innerText = `${p.nome} (Atual: ${p.estoque})`;
             document.getElementById('modal_qtd_ajuste').value = 1;
             document.getElementById('modalEstoque').classList.add('active');
         }
@@ -793,28 +141,13 @@
 
         async function confirmarAjusteEstoque() {
             const id = document.getElementById('modal_prod_id').value;
-            const p = cacheProdutos.find(item => item.id == id);
-            if (!p) return;
-
             const tipo = document.getElementById('modal_tipo_ajuste').value;
-            const valor = parseInt(document.getElementById('modal_qtd_ajuste').value) || 0;
-            let novoEstoque = p.estoque_atual;
+            const qtd = parseInt(document.getElementById('modal_qtd_ajuste').value);
 
-            if (tipo === 'SOMAR') novoEstoque += valor;
-            else if (tipo === 'SUBTRAIR') novoEstoque -= valor;
-            else if (tipo === 'DEFINIR') novoEstoque = valor;
-
-            if (novoEstoque < 0) {
-                alert('O estoque resultante não pode ser negativo.');
-                return;
-            }
-
-            const payload = { ...p, estoque_atual: novoEstoque };
-
-            const res = await fetch(`${API_URL}/produtos/${id}`, {
-                method: 'PUT',
+            const res = await fetch(`${API_URL}/produtos/${id}/estoque`, {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ tipo, quantidade: qtd })
             });
 
             if (res.ok) {
@@ -829,13 +162,19 @@
         /* --- CONTAS PAGAR / RECEBER --- */
         async function carregarContas() {
             const res = await fetch(`${API_URL}/contas`);
-            const dados = await res.json();
+            const contas = await res.json();
             const tbody = document.querySelector('#tblContas tbody');
             tbody.innerHTML = '';
-            
-            dados.forEach(c => {
+            contas.forEach(c => {
                 const badgeClass = c.status === 'PAGO' ? 'badge-pago' : 'badge-pendente';
-                tbody.innerHTML += `<tr><td>${c.id}</td><td><strong>${c.tipo}</strong></td><td>${c.descricao}</td><td>R$ ${parseFloat(c.valor).toFixed(2)}</td><td>${c.data_vencimento}</td><td><span class="badge ${badgeClass}">${c.status}</span></td></tr>`;
+                tbody.innerHTML += `<tr>
+                    <td>${c.id}</td>
+                    <td>${c.tipo}</td>
+                    <td>${c.descricao}</td>
+                    <td>R$ ${parseFloat(c.valor).toFixed(2)}</td>
+                    <td>${c.vencimento}</td>
+                    <td><span class="badge ${badgeClass}">${c.status}</span></td>
+                </tr>`;
             });
         }
 
@@ -845,42 +184,48 @@
                 tipo: document.getElementById('conta_tipo').value,
                 descricao: document.getElementById('conta_desc').value,
                 valor: parseFloat(document.getElementById('conta_valor').value),
-                data_vencimento: document.getElementById('conta_vencimento').value,
+                vencimento: document.getElementById('conta_vencimento').value,
                 status: document.getElementById('conta_status').value
             };
-            await fetch(`${API_URL}/contas`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            document.getElementById('formConta').reset();
-            carregarContas();
+
+            const res = await fetch(`${API_URL}/contas`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                document.getElementById('formConta').reset();
+                carregarContas();
+            } else {
+                alert('Erro ao lançar conta.');
+            }
         }
 
-        /* --- VENDAS E RELATÓRIO --- */
-        async function carregarSelectProdutos() {
-            const res = await fetch(`${API_URL}/produtos`);
-            cacheProdutos = await res.json();
+        /* --- VENDAS & ESTOQUE --- */
+        function carregarSelectProdutos() {
             const selectVenda = document.getElementById('venda_produto');
             selectVenda.innerHTML = '<option value="">Selecione...</option>';
-            cacheProdutos.forEach(p => {
-                selectVenda.innerHTML += `<option value="${p.id}">${p.nome} (R$ ${parseFloat(p.preco_venda).toFixed(2)}) - Estq: ${p.estoque_atual}</option>`;
-            });
+            cacheProdutos.forEach(p => selectVenda.innerHTML += `<option value="${p.id}">${p.nome}</option>`);
         }
 
         function atualizarPrecoProduto() {
-            const prodId = document.getElementById('venda_produto').value;
-            const prod = cacheProdutos.find(p => p.id == prodId);
-            if (prod) document.getElementById('venda_preco').value = prod.preco_venda;
+            const prodId = parseInt(document.getElementById('venda_produto').value);
+            const prod = cacheProdutos.find(p => p.id === prodId);
+            if (prod) {
+                document.getElementById('venda_preco').value = prod.preco_venda;
+            }
         }
 
         async function emitirVenda(e) {
             e.preventDefault();
             const payload = {
-                cliente_id: parseInt(document.getElementById('venda_cliente').value),
+                cliente_id: document.getElementById('venda_cliente').value,
+                produto_id: document.getElementById('venda_produto').value,
+                quantidade: parseInt(document.getElementById('venda_qtd').value),
+                preco_unitario: parseFloat(document.getElementById('venda_preco').value),
                 forma_pagamento: document.getElementById('venda_pagamento').value,
-                status_pagamento: document.getElementById('venda_status').value,
-                itens: [{
-                    produto_id: parseInt(document.getElementById('venda_produto').value),
-                    quantidade: parseInt(document.getElementById('venda_qtd').value),
-                    preco_unitario: parseFloat(document.getElementById('venda_preco').value)
-                }]
+                status: document.getElementById('venda_status').value
             };
 
             const res = await fetch(`${API_URL}/vendas`, {
@@ -890,23 +235,25 @@
             });
 
             if (res.ok) {
-                alert('Venda emitida com sucesso!');
                 document.getElementById('formVenda').reset();
-                carregarSelectProdutos();
+                carregarProdutos();
                 carregarRelatorioEstoque();
-                carregarContas();
+                alert('Venda emitida com sucesso!');
             } else {
-                alert('Erro ao emitir venda.');
+                alert('Erro ao processar venda.');
             }
         }
 
-        async function carregarRelatorioEstoque() {
-            const res = await fetch(`${API_URL}/relatorios/estoque`);
-            const dados = await res.json();
+        function carregarRelatorioEstoque() {
             const tbody = document.querySelector('#tblEstoque tbody');
             tbody.innerHTML = '';
-            dados.forEach(p => {
-                tbody.innerHTML += `<tr><td>${p.codigo || p.id}</td><td>${p.nome}</td><td><strong>${p.estoque_atual}</strong></td><td>R$ ${parseFloat(p.preco_venda).toFixed(2)}</td></tr>`;
+            cacheProdutos.forEach(p => {
+                tbody.innerHTML += `<tr>
+                    <td>${p.codigo || '-'}</td>
+                    <td>${p.nome}</td>
+                    <td><strong>${p.estoque}</strong></td>
+                    <td>R$ ${parseFloat(p.preco_venda).toFixed(2)}</td>
+                </tr>`;
             });
         }
     </script>

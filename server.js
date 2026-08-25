@@ -29,17 +29,21 @@ db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS fornecedores (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome_fantasia TEXT NOT NULL,
-        cnpj TEXT NOT NULL,
+        cnpj TEXT,
+        ie TEXT,
         telefone TEXT,
-        email TEXT
+        email TEXT,
+        contato TEXT,
+        observacoes TEXT
     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS produtos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        codigo TEXT,
         nome TEXT NOT NULL,
-        preco_custo REAL NOT NULL,
-        preco_venda REAL NOT NULL,
-        estoque_atual INTEGER DEFAULT 0,
+        preco_custo REAL DEFAULT 0,
+        preco_venda REAL DEFAULT 0,
+        estoque INTEGER DEFAULT 0,
         fornecedor_id INTEGER,
         FOREIGN KEY(fornecedor_id) REFERENCES fornecedores(id)
     )`);
@@ -49,32 +53,27 @@ db.serialize(() => {
         tipo TEXT CHECK(tipo IN ('PAGAR', 'RECEBER')) NOT NULL,
         descricao TEXT NOT NULL,
         valor REAL NOT NULL,
-        data_vencimento TEXT NOT NULL,
+        vencimento TEXT NOT NULL,
         status TEXT CHECK(status IN ('PENDENTE', 'PAGO')) DEFAULT 'PENDENTE'
     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS vendas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         cliente_id INTEGER,
-        data_venda DATETIME DEFAULT CURRENT_TIMESTAMP,
-        valor_total REAL NOT NULL,
-        FOREIGN KEY(cliente_id) REFERENCES clientes(id)
-    )`);
-
-    db.run(`CREATE TABLE IF NOT EXISTS itens_venda (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        venda_id INTEGER,
         produto_id INTEGER,
-        quantidade INTEGER NOT NULL,
-        preco_unitario REAL NOT NULL,
-        FOREIGN KEY(venda_id) REFERENCES vendas(id),
+        quantidade INTEGER,
+        preco_unitario REAL,
+        forma_pagamento TEXT,
+        status TEXT,
+        data_venda DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(cliente_id) REFERENCES clientes(id),
         FOREIGN KEY(produto_id) REFERENCES produtos(id)
     )`);
 });
 
 // --- ROTAS DA API ---
 
-// Clientes
+/* --- CLIENTES --- */
 app.get('/api/clientes', (req, res) => {
     db.all("SELECT * FROM clientes", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -93,7 +92,25 @@ app.post('/api/clientes', (req, res) => {
     );
 });
 
-// Fornecedores
+app.put('/api/clientes/:id', (req, res) => {
+    const { nome, cpf_cnpj, telefone, email } = req.body;
+    db.run("UPDATE clientes SET nome = ?, cpf_cnpj = ?, telefone = ?, email = ? WHERE id = ?",
+        [nome, cpf_cnpj, telefone, email, req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ updated: true });
+        }
+    );
+});
+
+app.delete('/api/clientes/:id', (req, res) => {
+    db.run("DELETE FROM clientes WHERE id = ?", req.params.id, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ deleted: true });
+    });
+});
+
+/* --- FORNECEDORES --- */
 app.get('/api/fornecedores', (req, res) => {
     db.all("SELECT * FROM fornecedores", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -102,9 +119,9 @@ app.get('/api/fornecedores', (req, res) => {
 });
 
 app.post('/api/fornecedores', (req, res) => {
-    const { nome_fantasia, cnpj, telefone, email } = req.body;
-    db.run("INSERT INTO fornecedores (nome_fantasia, cnpj, telefone, email) VALUES (?, ?, ?, ?)",
-        [nome_fantasia, cnpj, telefone, email],
+    const { nome_fantasia, cnpj, ie, telefone, email, contato, observacoes } = req.body;
+    db.run("INSERT INTO fornecedores (nome_fantasia, cnpj, ie, telefone, email, contato, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [nome_fantasia, cnpj, ie, telefone, email, contato, observacoes],
         function(err) {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ id: this.lastID });
@@ -112,11 +129,36 @@ app.post('/api/fornecedores', (req, res) => {
     );
 });
 
-// Produtos
+app.put('/api/fornecedores/:id', (req, res) => {
+    const { nome_fantasia, cnpj, ie, telefone, email, contato, observacoes } = req.body;
+    db.run("UPDATE fornecedores SET nome_fantasia = ?, cnpj = ?, ie = ?, telefone = ?, email = ?, contato = ?, observacoes = ? WHERE id = ?",
+        [nome_fantasia, cnpj, ie, telefone, email, contato, observacoes, req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ updated: true });
+        }
+    );
+});
+
+app.delete('/api/fornecedores/:id', (req, res) => {
+    db.run("DELETE FROM fornecedores WHERE id = ?", req.params.id, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ deleted: true });
+    });
+});
+
+/* --- PRODUTOS --- */
+app.get('/api/produtos', (req, res) => {
+    db.all("SELECT * FROM produtos", [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
 app.post('/api/produtos', (req, res) => {
-    const { nome, preco_custo, preco_venda, estoque_atual, fornecedor_id } = req.body;
-    db.run("INSERT INTO produtos (nome, preco_custo, preco_venda, estoque_atual, fornecedor_id) VALUES (?, ?, ?, ?, ?)",
-        [nome, preco_custo, preco_venda, estoque_atual, fornecedor_id],
+    const { codigo, nome, preco_custo, preco_venda, estoque, fornecedor_id } = req.body;
+    db.run("INSERT INTO produtos (codigo, nome, preco_custo, preco_venda, estoque, fornecedor_id) VALUES (?, ?, ?, ?, ?, ?)",
+        [codigo, nome, preco_custo, preco_venda, estoque, fornecedor_id],
         function(err) {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ id: this.lastID });
@@ -124,7 +166,40 @@ app.post('/api/produtos', (req, res) => {
     );
 });
 
-// Contas
+app.put('/api/produtos/:id', (req, res) => {
+    const { codigo, nome, preco_custo, preco_venda, estoque, fornecedor_id } = req.body;
+    db.run("UPDATE produtos SET codigo = ?, nome = ?, preco_custo = ?, preco_venda = ?, estoque = ?, fornecedor_id = ? WHERE id = ?",
+        [codigo, nome, preco_custo, preco_venda, estoque, fornecedor_id, req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ updated: true });
+        }
+    );
+});
+
+app.patch('/api/produtos/:id/estoque', (req, res) => {
+    const { tipo, quantidade } = req.body;
+    let query = '';
+    
+    if (tipo === 'SOMAR') query = 'UPDATE produtos SET estoque = estoque + ? WHERE id = ?';
+    else if (tipo === 'SUBTRAIR') query = 'UPDATE produtos SET estoque = estoque - ? WHERE id = ?';
+    else if (tipo === 'DEFINIR') query = 'UPDATE produtos SET estoque = ? WHERE id = ?';
+    else return res.status(400).json({ error: 'Tipo de ajuste inválido' });
+
+    db.run(query, [quantidade, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ updated: true });
+    });
+});
+
+app.delete('/api/produtos/:id', (req, res) => {
+    db.run("DELETE FROM produtos WHERE id = ?", req.params.id, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ deleted: true });
+    });
+});
+
+/* --- CONTAS --- */
 app.get('/api/contas', (req, res) => {
     db.all("SELECT * FROM contas", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -133,9 +208,9 @@ app.get('/api/contas', (req, res) => {
 });
 
 app.post('/api/contas', (req, res) => {
-    const { tipo, descricao, valor, data_vencimento, status } = req.body;
-    db.run("INSERT INTO contas (tipo, descricao, valor, data_vencimento, status) VALUES (?, ?, ?, ?, ?)",
-        [tipo, descricao, valor, data_vencimento, status],
+    const { tipo, descricao, valor, vencimento, status } = req.body;
+    db.run("INSERT INTO contas (tipo, descricao, valor, vencimento, status) VALUES (?, ?, ?, ?, ?)",
+        [tipo, descricao, valor, vencimento, status],
         function(err) {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ id: this.lastID });
@@ -143,44 +218,44 @@ app.post('/api/contas', (req, res) => {
     );
 });
 
-// Vendas
+/* --- VENDAS --- */
 app.post('/api/vendas', (req, res) => {
-    const { cliente_id, itens } = req.body;
-    let valor_total = itens.reduce((sum, item) => sum + (item.quantidade * item.preco_unitario), 0);
+    const { cliente_id, produto_id, quantidade, preco_unitario, forma_pagamento, status } = req.body;
+    const valor_total = quantidade * preco_unitario;
 
-    db.run("INSERT INTO vendas (cliente_id, valor_total) VALUES (?, ?)", [cliente_id, valor_total], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        const venda_id = this.lastID;
+    db.serialize(() => {
+        db.run("INSERT INTO vendas (cliente_id, produto_id, quantidade, preco_unitario, forma_pagamento, status) VALUES (?, ?, ?, ?, ?, ?)",
+            [cliente_id, produto_id, quantidade, preco_unitario, forma_pagamento, status],
+            function(err) {
+                if (err) return res.status(500).json({ error: err.message });
 
-        itens.forEach(item => {
-            db.run("INSERT INTO itens_venda (venda_id, produto_id, quantidade, preco_unitario) VALUES (?, ?, ?, ?)",
-                [venda_id, item.produto_id, item.quantidade, item.preco_unitario]);
+                // Atualizar o estoque do produto vendido
+                db.run("UPDATE produtos SET estoque = estoque - ? WHERE id = ?", [quantidade, produto_id]);
 
-            db.run("UPDATE produtos SET estoque_atual = estoque_atual - ? WHERE id = ?",
-                [item.quantidade, item.produto_id]);
-        });
+                // Registrar o título a receber no financeiro
+                const hoje = new Date().toISOString().split('T')[0];
+                db.run("INSERT INTO contas (tipo, descricao, valor, vencimento, status) VALUES (?, ?, ?, ?, ?)",
+                    ['RECEBER', `Venda #${this.lastID}`, valor_total, hoje, status === 'CONCLUIDO' ? 'PAGO' : 'PENDENTE']);
 
-        const hoje = new Date().toISOString().split('T')[0];
-        db.run("INSERT INTO contas (tipo, descricao, valor, data_vencimento, status) VALUES (?, ?, ?, ?, ?)",
-            ['RECEBER', `Venda #${venda_id}`, valor_total, hoje, 'PENDENTE']);
-
-        res.json({ venda_id, valor_total });
+                res.json({ success: true });
+            }
+        );
     });
 });
 
 // Relatório de Estoque
 app.get('/api/relatorios/estoque', (req, res) => {
-    db.all("SELECT id, nome, estoque_atual, preco_venda FROM produtos", [], (err, rows) => {
+    db.all("SELECT id, codigo, nome, estoque, preco_venda FROM produtos", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
 });
 
-// Rota padrão para renderizar a página principal
+// Rota padrão para renderizar a página principal (Single Page Application)
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Porta dinâmica para hospedagem
+// Inicialização do servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
