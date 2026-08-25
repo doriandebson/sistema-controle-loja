@@ -126,22 +126,52 @@
                 <p>Cadastre e gerencie fornecedores parceiros.</p>
             </div>
             <div class="card">
-                <h3 class="card-title">Cadastrar Fornecedor</h3>
-                <form id="formFornecedor" onsubmit="cadastrarFornecedor(event)">
+                <h3 class="card-title" id="titleFormFornecedor">Cadastrar Fornecedor</h3>
+                <form id="formFornecedor" onsubmit="salvarFornecedor(event)">
+                    <input type="hidden" id="for_id">
                     <div class="form-grid">
-                        <div class="form-group"><label>Nome Fantasia *</label><input type="text" id="for_nome" required></div>
-                        <div class="form-group"><label>CNPJ *</label><input type="text" id="for_cnpj" required></div>
-                        <div class="form-group"><label>Telefone</label><input type="text" id="for_telefone"></div>
-                        <div class="form-group"><label>E-mail</label><input type="email" id="for_email"></div>
+                        <div class="form-group">
+                            <label>Nome / Razão Social *</label>
+                            <input type="text" id="for_nome" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo de Documento *</label>
+                            <select id="for_tipo_doc" onchange="alterarTipoDocFornecedor()">
+                                <option value="CNPJ">CNPJ</option>
+                                <option value="CPF">CPF</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label id="lbl_for_doc">CNPJ *</label>
+                            <input type="text" id="for_cnpj" placeholder="00.000.000/0000-00" oninput="mascaraCPFCNPJ(this)" maxlength="18" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Telefone</label>
+                            <input type="text" id="for_telefone" placeholder="(00) 90000-0000" oninput="mascaraTelefone(this)" maxlength="15">
+                        </div>
+                        <div class="form-group">
+                            <label>E-mail</label>
+                            <input type="email" id="for_email" placeholder="fornecedor@email.com">
+                        </div>
                     </div>
-                    <button type="submit" class="btn">Cadastrar Fornecedor</button>
+                    <button type="submit" class="btn" id="btnSalvarFornecedor">Salvar Fornecedor</button>
+                    <button type="button" class="btn btn-secondary" onclick="resetFormFornecedor()">Cancelar</button>
                 </form>
             </div>
             <div class="card">
                 <h3 class="card-title">Fornecedores Cadastrados</h3>
                 <div class="table-responsive">
                     <table id="tblFornecedores">
-                        <thead><tr><th>ID</th><th>Nome Fantasia</th><th>CNPJ</th><th>Telefone</th><th>E-mail</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome / Razão Social</th>
+                                <th>CPF / CNPJ</th>
+                                <th>Telefone</th>
+                                <th>E-mail</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -279,6 +309,7 @@
     <script>
         const API_URL = '/api';
         let cacheClientes = [];
+        let cacheFornecedores = [];
         let cacheProdutos = [];
 
         window.onload = () => carregarDadosIniciais();
@@ -305,13 +336,49 @@
             carregarRelatorioEstoque();
         }
 
-        /* --- MÁSCARAS E VALIDAÇÕES (CLIENTES) --- */
+        /* --- MÁSCARAS E VALIDAÇÕES COMPARTILHADAS --- */
         function mascaraCPF(input) {
             let v = input.value.replace(/\D/g, "");
             v = v.replace(/(\d{3})(\d)/, "$1.$2");
             v = v.replace(/(\d{3})(\d)/, "$1.$2");
             v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
             input.value = v;
+        }
+
+        function mascaraCPFCNPJ(input) {
+            let v = input.value.replace(/\D/g, "");
+            const tipo = document.getElementById('for_tipo_doc').value;
+
+            if (tipo === 'CPF') {
+                v = v.substring(0, 11);
+                v = v.replace(/(\d{3})(\d)/, "$1.$2");
+                v = v.replace(/(\d{3})(\d)/, "$1.$2");
+                v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+            } else {
+                v = v.substring(0, 14);
+                v = v.replace(/^(\d{2})(\d)/, "$1.$2");
+                v = v.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
+                v = v.replace(/\.(\d{3})(\d)/, ".$1/$2");
+                v = v.replace(/(\d{4})(\d)/, "$1-$2");
+            }
+            input.value = v;
+        }
+
+        function alterarTipoDocFornecedor() {
+            const tipo = document.getElementById('for_tipo_doc').value;
+            const input = document.getElementById('for_cnpj');
+            const label = document.getElementById('lbl_for_doc');
+
+            input.value = '';
+            if (tipo === 'CPF') {
+                label.innerText = 'CPF *';
+                input.placeholder = '000.000.000-00';
+                input.maxLength = 14;
+            } else {
+                label.innerText = 'CNPJ *';
+                input.placeholder = '00.000.000/0000-00';
+                input.maxLength = 18;
+            }
         }
 
         function mascaraTelefone(input) {
@@ -365,11 +432,10 @@
 
         async function salvarCliente(e) {
             e.preventDefault();
-            
             const emailInput = document.getElementById('cli_email').value.trim();
 
             if (emailInput && !validarEmail(emailInput)) {
-                alert('Por favor, informe um e-mail válido (exemplo@dominio.com).');
+                alert('Por favor, informe um e-mail válido.');
                 document.getElementById('cli_email').focus();
                 return;
             }
@@ -385,21 +451,12 @@
             const url = id ? `${API_URL}/clientes/${id}` : `${API_URL}/clientes`;
             const method = id ? 'PUT' : 'POST';
 
-            try {
-                const res = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.ok) {
-                    resetFormCliente();
-                    carregarClientes();
-                } else {
-                    alert('Erro ao salvar o cliente.');
-                }
-            } catch (err) {
-                console.error('Erro na requisição:', err);
+            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (res.ok) {
+                resetFormCliente();
+                carregarClientes();
+            } else {
+                alert('Erro ao salvar cliente.');
             }
         }
 
@@ -430,34 +487,104 @@
             else alert('Erro ao excluir cliente.');
         }
 
-        /* --- OUTRAS SEÇÕES (PADRÃO) --- */
+        /* --- GERENCIAMENTO DE FORNECEDORES --- */
         async function carregarFornecedores() {
             const res = await fetch(`${API_URL}/fornecedores`);
-            const dados = await res.json();
-            const tbody = document.querySelector('#tblFornecedores tbody');
+            cacheFornecedores = await res.json();
+            renderTabelaFornecedores(cacheFornecedores);
+
             const selectProd = document.getElementById('prod_fornecedor');
-            tbody.innerHTML = '';
             selectProd.innerHTML = '<option value="">Selecione...</option>';
-            
-            dados.forEach(f => {
-                tbody.innerHTML += `<tr><td>${f.id}</td><td>${f.nome_fantasia}</td><td>${f.cnpj}</td><td>${f.telefone || '-'}</td><td>${f.email || '-'}</td></tr>`;
+            cacheFornecedores.forEach(f => {
                 selectProd.innerHTML += `<option value="${f.id}">${f.nome_fantasia}</option>`;
             });
         }
 
-        async function cadastrarFornecedor(e) {
+        function renderTabelaFornecedores(lista) {
+            const tbody = document.querySelector('#tblFornecedores tbody');
+            tbody.innerHTML = '';
+            lista.forEach(f => {
+                tbody.innerHTML += `<tr>
+                    <td>${f.id}</td>
+                    <td>${f.nome_fantasia}</td>
+                    <td>${f.cnpj || '-'}</td>
+                    <td>${f.telefone || '-'}</td>
+                    <td>${f.email || '-'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-edit" onclick="editarFornecedor(${f.id})">Editar</button>
+                        <button class="btn btn-sm btn-del" onclick="excluirFornecedor(${f.id})">Excluir</button>
+                    </td>
+                </tr>`;
+            });
+        }
+
+        async function salvarFornecedor(e) {
             e.preventDefault();
+            const emailInput = document.getElementById('for_email').value.trim();
+
+            if (emailInput && !validarEmail(emailInput)) {
+                alert('Por favor, informe um e-mail válido.');
+                document.getElementById('for_email').focus();
+                return;
+            }
+
+            const id = document.getElementById('for_id').value;
             const payload = {
                 nome_fantasia: document.getElementById('for_nome').value,
                 cnpj: document.getElementById('for_cnpj').value,
                 telefone: document.getElementById('for_telefone').value,
-                email: document.getElementById('for_email').value
+                email: emailInput
             };
-            await fetch(`${API_URL}/fornecedores`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            document.getElementById('formFornecedor').reset();
-            carregarFornecedores();
+
+            const url = id ? `${API_URL}/fornecedores/${id}` : `${API_URL}/fornecedores`;
+            const method = id ? 'PUT' : 'POST';
+
+            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (res.ok) {
+                resetFormFornecedor();
+                carregarFornecedores();
+            } else {
+                alert('Erro ao salvar fornecedor.');
+            }
         }
 
+        function editarFornecedor(id) {
+            const f = cacheFornecedores.find(item => item.id === id);
+            if (!f) return;
+            document.getElementById('for_id').value = f.id;
+            document.getElementById('for_nome').value = f.nome_fantasia;
+            
+            // Ajusta o tipo de doc dinamicamente ao editar
+            const doc = f.cnpj || '';
+            const isCPF = doc.replace(/\D/g, "").length <= 11;
+            document.getElementById('for_tipo_doc').value = isCPF ? 'CPF' : 'CNPJ';
+            alterarTipoDocFornecedor();
+
+            document.getElementById('for_cnpj').value = doc;
+            document.getElementById('for_telefone').value = f.telefone || '';
+            document.getElementById('for_email').value = f.email || '';
+
+            document.getElementById('titleFormFornecedor').innerText = 'Editar Fornecedor';
+            document.getElementById('btnSalvarFornecedor').innerText = 'Atualizar Fornecedor';
+        }
+
+        function resetFormFornecedor() {
+            document.getElementById('formFornecedor').reset();
+            document.getElementById('for_id').value = '';
+            document.getElementById('for_tipo_doc').value = 'CNPJ';
+            alterarTipoDocFornecedor();
+            document.getElementById('titleFormFornecedor').innerText = 'Cadastrar Fornecedor';
+            document.getElementById('btnSalvarFornecedor').innerText = 'Salvar Fornecedor';
+        }
+
+        async function excluirFornecedor(id) {
+            if (!confirm('Deseja realmente excluir este fornecedor?')) return;
+            const res = await fetch(`${API_URL}/fornecedores/${id}`, { method: 'DELETE' });
+            if (res.ok) carregarFornecedores();
+            else alert('Erro ao excluir fornecedor.');
+        }
+
+        /* --- PRODUTOS, CONTAS E VENDAS --- */
         async function carregarProdutos() {
             const res = await fetch(`${API_URL}/produtos`);
             cacheProdutos = await res.json();
