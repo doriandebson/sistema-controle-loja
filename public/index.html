@@ -34,6 +34,9 @@
         .form-group textarea { resize: vertical; min-height: 60px; }
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #1a2a52; outline: none; }
 
+        /* Summary Cards */
+        .summary-box { background: #eef2f7; border-left: 4px solid #1a2a52; padding: 15px; border-radius: 4px; margin-bottom: 20px; font-size: 1.1rem; font-weight: bold; color: #1a2a52; }
+
         /* Botões */
         .btn { padding: 9px 18px; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; background: #1a2a52; color: #fff; }
         .btn:hover { background: #2c3e6b; }
@@ -69,6 +72,7 @@
             <button class="nav-btn" onclick="navegarPara('produtos', event)">📦 Produtos</button>
             <button class="nav-btn" onclick="navegarPara('contas', event)">💰 Contas Pagar / Receber</button>
             <button class="nav-btn" onclick="navegarPara('vendas', event)">🛒 Vendas & Estoque</button>
+            <button class="nav-btn" onclick="navegarPara('relatorio-vendas', event)">📊 Relatório de Vendas</button>
         </nav>
     </aside>
 
@@ -338,6 +342,37 @@
                 </div>
             </div>
         </section>
+
+        <!-- RELATÓRIO DE VENDAS -->
+        <section id="sec-relatorio-vendas" class="section-panel">
+            <div class="page-header">
+                <h2>Relatório Geral de Vendas</h2>
+                <p>Consulte o histórico de todas as vendas realizadas no sistema.</p>
+            </div>
+            <div class="summary-box" id="boxTotalVendas">
+                Total Bruto Vendido: R$ 0,00
+            </div>
+            <div class="card">
+                <h3 class="card-title">Histórico de Vendas</h3>
+                <div class="table-responsive">
+                    <table id="tblRelatorioVendas">
+                        <thead>
+                            <tr>
+                                <th>ID Venda</th>
+                                <th>Cliente</th>
+                                <th>Produto</th>
+                                <th>Qtd.</th>
+                                <th>Preço Unit.</th>
+                                <th>Total</th>
+                                <th>Forma Pgto.</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Modal Ajustar Estoque -->
@@ -370,6 +405,7 @@
         let cacheFornecedores = [];
         let cacheProdutos = [];
         let cacheContas = [];
+        let cacheVendas = [];
 
         window.onload = () => carregarDadosIniciais();
 
@@ -395,6 +431,8 @@
                 carregarRelatorioEstoque();
             } else if (secao === 'contas') {
                 carregarContas();
+            } else if (secao === 'relatorio-vendas') {
+                carregarRelatorioVendas();
             }
         }
 
@@ -404,6 +442,7 @@
             carregarProdutos();
             carregarContas();
             carregarRelatorioEstoque();
+            carregarRelatorioVendas();
         }
 
         /* --- MÁSCARAS E VALIDAÇÕES --- */
@@ -834,73 +873,70 @@
         }
 
         async function emitirVenda(e) {
-    e.preventDefault();
+            e.preventDefault();
 
-    const clienteId = document.getElementById('venda_cliente').value;
-    const produtoId = document.getElementById('venda_produto').value;
-    const qtd = parseInt(document.getElementById('venda_qtd').value);
-    const preco = parseFloat(document.getElementById('venda_preco').value);
-    const formaPagamento = document.getElementById('venda_pagamento').value;
-    const statusPagamento = document.getElementById('venda_status').value;
-    const valorTotal = qtd * preco;
+            const clienteId = document.getElementById('venda_cliente').value;
+            const produtoId = document.getElementById('venda_produto').value;
+            const qtd = parseInt(document.getElementById('venda_qtd').value);
+            const preco = parseFloat(document.getElementById('venda_preco').value);
+            const formaPagamento = document.getElementById('venda_pagamento').value;
+            const statusPagamento = document.getElementById('venda_status').value;
+            const valorTotal = qtd * preco;
 
-    const payloadVenda = {
-        cliente_id: clienteId,
-        produto_id: produtoId,
-        quantidade: qtd,
-        preco_unitario: preco,
-        forma_pagamento: formaPagamento,
-        status_pagamento: statusPagamento
-    };
-
-    try {
-        // 1. Registra a venda
-        const resVenda = await fetch(`${API_URL}/vendas`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payloadVenda)
-        });
-
-        if (!resVenda.ok) throw new Error('Erro ao registrar venda.');
-
-        // 2. Se a venda for PENDENTE, gera automaticamente o lançamento em Contas a Receber
-        if (statusPagamento === 'PENDENTE') {
-            const cliente = cacheClientes.find(c => c.id == clienteId);
-            const nomeCliente = cliente ? cliente.nome : 'Cliente Não Identificado';
-            
-            // Define vencimento padrão para 30 dias após hoje
-            const dataVencimento = new Date();
-            dataVencimento.setDate(dataVencimento.getDate() + 30);
-            const vencimentoFormatado = dataVencimento.toISOString().split('T')[0];
-
-            const payloadConta = {
-                tipo: 'RECEBER',
-                descricao: `Venda - Cliente: ${nomeCliente}`,
-                valor: valorTotal,
-                vencimento: vencimentoFormatado,
-                status: 'PENDENTE'
+            const payloadVenda = {
+                cliente_id: clienteId,
+                produto_id: produtoId,
+                quantidade: qtd,
+                preco_unitario: preco,
+                forma_pagamento: formaPagamento,
+                status_pagamento: statusPagamento
             };
 
-            await fetch(`${API_URL}/contas`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payloadConta)
-            });
+            try {
+                const resVenda = await fetch(`${API_URL}/vendas`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payloadVenda)
+                });
+
+                if (!resVenda.ok) throw new Error('Erro ao registrar venda.');
+
+                if (statusPagamento === 'PENDENTE') {
+                    const cliente = cacheClientes.find(c => c.id == clienteId);
+                    const nomeCliente = cliente ? cliente.nome : 'Cliente Não Identificado';
+                    
+                    const dataVencimento = new Date();
+                    dataVencimento.setDate(dataVencimento.getDate() + 30);
+                    const vencimentoFormatado = dataVencimento.toISOString().split('T')[0];
+
+                    const payloadConta = {
+                        tipo: 'RECEBER',
+                        descricao: `Venda - Cliente: ${nomeCliente}`,
+                        valor: valorTotal,
+                        vencimento: vencimentoFormatado,
+                        status: 'PENDENTE'
+                    };
+
+                    await fetch(`${API_URL}/contas`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payloadConta)
+                    });
+                }
+
+                alert('Venda realizada com sucesso!');
+                document.getElementById('formVenda').reset();
+
+                carregarProdutos();
+                carregarContas();
+                carregarRelatorioEstoque();
+                carregarRelatorioVendas();
+
+            } catch (err) {
+                console.error(err);
+                alert('Erro ao processar a venda.');
+            }
         }
-
-        alert('Venda realizada com sucesso!');
-        document.getElementById('formVenda').reset();
-
-        // 3. Atualiza os dados de todas as abas afetadas
-        carregarProdutos();
-        carregarContas();
-        carregarRelatorioEstoque();
-
-    } catch (err) {
-        console.error(err);
-        alert('Erro ao processar a venda.');
-    }
-}
 
         function carregarRelatorioEstoque() {
             const tbody = document.querySelector('#tblEstoque tbody');
@@ -913,6 +949,51 @@
                     <td>R$ ${parseFloat(p.preco_venda).toFixed(2)}</td>
                 </tr>`;
             });
+        }
+
+        /* --- RELATÓRIO DE VENDAS --- */
+        async function carregarRelatorioVendas() {
+            try {
+                const res = await fetch(`${API_URL}/vendas`);
+                cacheVendas = await res.json();
+                renderTabelaVendas(cacheVendas);
+            } catch (err) {
+                console.error("Erro ao carregar relatório de vendas:", err);
+            }
+        }
+
+        function renderTabelaVendas(lista) {
+            const tbody = document.querySelector('#tblRelatorioVendas tbody');
+            tbody.innerHTML = '';
+            let valorTotalAcumulado = 0;
+
+            lista.forEach(v => {
+                const cliente = cacheClientes.find(c => c.id == v.cliente_id);
+                const produto = cacheProdutos.find(p => p.id == v.produto_id);
+                
+                const nomeCliente = cliente ? cliente.nome : (v.cliente_nome || `ID ${v.cliente_id}`);
+                const nomeProduto = produto ? produto.nome : (v.produto_nome || `ID ${v.produto_id}`);
+                
+                const qtd = parseInt(v.quantidade || 0);
+                const precoUnit = parseFloat(v.preco_unitario || 0);
+                const totalItem = qtd * precoUnit;
+                valorTotalAcumulado += totalItem;
+
+                const badgeClass = v.status_pagamento === 'PAGO' ? 'badge-pago' : 'badge-pendente';
+
+                tbody.innerHTML += `<tr>
+                    <td>${v.id}</td>
+                    <td>${nomeCliente}</td>
+                    <td>${nomeProduto}</td>
+                    <td>${qtd}</td>
+                    <td>R$ ${precoUnit.toFixed(2)}</td>
+                    <td>R$ ${totalItem.toFixed(2)}</td>
+                    <td>${v.forma_pagamento || '-'}</td>
+                    <td><span class="badge ${badgeClass}">${v.status_pagamento || 'PENDENTE'}</span></td>
+                </tr>`;
+            });
+
+            document.getElementById('boxTotalVendas').innerText = `Total Bruto Vendido: R$ ${valorTotalAcumulado.toFixed(2)}`;
         }
     </script>
 </body>
