@@ -25,7 +25,7 @@
 
         /* Cards e Forms */
         .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .card-title { font-size: 1.1rem; margin-bottom: 15px; color: #1a2a52; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .card-title { font-size: 1.1rem; margin-bottom: 15px; color: #1a2a52; border-bottom: 1px solid #eee; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
         .form-group { display: flex; flex-direction: column; }
         .form-group.full-width { grid-column: 1 / -1; }
@@ -42,6 +42,8 @@
         .btn-sm { padding: 5px 10px; font-size: 0.8rem; margin-right: 5px; }
         .btn-edit { background: #ffc107; color: #000; }
         .btn-edit:hover { background: #e0a800; }
+        .btn-stock { background: #17a2b8; color: #fff; }
+        .btn-stock:hover { background: #138496; }
         .btn-del { background: #dc3545; color: #fff; }
         .btn-del:hover { background: #c82333; }
 
@@ -53,6 +55,11 @@
         .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
         .badge-pago { background: #d4edda; color: #155724; }
         .badge-pendente { background: #fff3cd; color: #856404; }
+
+        /* Modal Simple */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-body { background: #fff; padding: 25px; border-radius: 8px; width: 100%; max-width: 400px; }
     </style>
 </head>
 <body>
@@ -198,29 +205,62 @@
         <section id="sec-produtos" class="section-panel">
             <div class="page-header">
                 <h2>Gerenciamento de Produtos</h2>
-                <p>Cadastro e atualização do estoque de produtos.</p>
+                <p>Cadastro, consulta e atualização rápida de estoque.</p>
             </div>
             <div class="card">
-                <h3 class="card-title">Cadastrar Produto</h3>
-                <form id="formProduto" onsubmit="cadastrarProduto(event)">
+                <h3 class="card-title" id="titleFormProduto">Cadastrar Produto</h3>
+                <form id="formProduto" onsubmit="salvarProduto(event)">
+                    <input type="hidden" id="prod_id">
                     <div class="form-grid">
-                        <div class="form-group"><label>Nome do Produto *</label><input type="text" id="prod_nome" required></div>
-                        <div class="form-group"><label>Preço de Custo (R$) *</label><input type="number" step="0.01" id="prod_custo" required></div>
-                        <div class="form-group"><label>Preço de Venda (R$) *</label><input type="number" step="0.01" id="prod_venda" required></div>
-                        <div class="form-group"><label>Estoque Atual *</label><input type="number" id="prod_estoque" value="0" required></div>
+                        <div class="form-group">
+                            <label>Código / Ref. / EAN</label>
+                            <input type="text" id="prod_codigo" placeholder="Ex: PROD-001 ou 7891234567890">
+                        </div>
+                        <div class="form-group">
+                            <label>Nome do Produto *</label>
+                            <input type="text" id="prod_nome" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Preço de Custo (R$) *</label>
+                            <input type="number" step="0.01" id="prod_custo" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Preço de Venda (R$) *</label>
+                            <input type="number" step="0.01" id="prod_venda" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Estoque Inicial / Atual *</label>
+                            <input type="number" id="prod_estoque" value="0" required>
+                        </div>
                         <div class="form-group">
                             <label>Fornecedor</label>
                             <select id="prod_fornecedor"><option value="">Selecione...</option></select>
                         </div>
                     </div>
-                    <button type="submit" class="btn">Cadastrar Produto</button>
+                    <button type="submit" class="btn" id="btnSalvarProduto">Salvar Produto</button>
+                    <button type="button" class="btn btn-secondary" onclick="resetFormProduto()">Cancelar</button>
                 </form>
             </div>
+
             <div class="card">
-                <h3 class="card-title">Produtos Cadastrados</h3>
+                <div class="card-title">
+                    <span>Produtos Cadastrados</span>
+                    <input type="text" id="buscaProduto" placeholder="🔍 Buscar por código ou nome..." oninput="filtrarProdutos(this.value)" style="padding: 6px 12px; font-size: 0.85rem; width: 260px; border-radius: 4px; border: 1px solid #ccc;">
+                </div>
                 <div class="table-responsive">
                     <table id="tblProdutos">
-                        <thead><tr><th>ID</th><th>Nome</th><th>Custo</th><th>Venda</th><th>Estoque</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Código</th>
+                                <th>Nome</th>
+                                <th>Preço Custo</th>
+                                <th>Preço Venda</th>
+                                <th>Estoque</th>
+                                <th>Fornecedor</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -321,6 +361,34 @@
             </div>
         </section>
     </main>
+
+    <!-- MODAL DE ATUALIZAÇÃO RÁPIDA DE ESTOQUE -->
+    <div id="modalEstoque" class="modal-overlay">
+        <div class="modal-body">
+            <h3 style="margin-bottom: 15px; color: #1a2a52;">Atualizar Estoque</h3>
+            <p id="modalNomeProduto" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 15px; color: #555;"></p>
+            <input type="hidden" id="modal_prod_id">
+            
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label>Tipo de Ajuste</label>
+                <select id="modal_tipo_ajuste">
+                    <option value="SOMAR">Entrada (+ Somas à quantidade)</option>
+                    <option value="SUBTRAIR">Saída/Perda (- Subtrai da quantidade)</option>
+                    <option value="DEFINIR">Definir Novo Total Fixo</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label>Quantidade</label>
+                <input type="number" id="modal_qtd_ajuste" min="1" value="1" required>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="fecharModalEstoque()">Cancelar</button>
+                <button type="button" class="btn" onclick="confirmarAjusteEstoque()">Confirmar Ajuste</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const API_URL = '/api';
@@ -578,7 +646,6 @@
             document.getElementById('for_id').value = f.id;
             document.getElementById('for_nome').value = f.nome_fantasia;
             
-            // Ajusta o tipo de doc dinamicamente ao editar
             const doc = f.cnpj || '';
             const isCPF = doc.replace(/\D/g, "").length <= 11;
             document.getElementById('for_tipo_doc').value = isCPF ? 'CPF' : 'CNPJ';
@@ -611,32 +678,155 @@
             else alert('Erro ao excluir fornecedor.');
         }
 
-        /* --- PRODUTOS, CONTAS E VENDAS --- */
+        /* --- GERENCIAMENTO DE PRODUTOS --- */
         async function carregarProdutos() {
             const res = await fetch(`${API_URL}/produtos`);
             cacheProdutos = await res.json();
+            renderTabelaProdutos(cacheProdutos);
+        }
+
+        function renderTabelaProdutos(lista) {
             const tbody = document.querySelector('#tblProdutos tbody');
             tbody.innerHTML = '';
-            cacheProdutos.forEach(p => {
-                tbody.innerHTML += `<tr><td>${p.id}</td><td>${p.nome}</td><td>R$ ${p.preco_custo.toFixed(2)}</td><td>R$ ${p.preco_venda.toFixed(2)}</td><td>${p.estoque_atual}</td></tr>`;
+            lista.forEach(p => {
+                const f = cacheFornecedores.find(item => item.id == p.fornecedor_id);
+                const nomeFornecedor = f ? f.nome_fantasia : '-';
+
+                tbody.innerHTML += `<tr>
+                    <td>${p.id}</td>
+                    <td><strong>${p.codigo || '-'}</strong></td>
+                    <td>${p.nome}</td>
+                    <td>R$ ${parseFloat(p.preco_custo).toFixed(2)}</td>
+                    <td>R$ ${parseFloat(p.preco_venda).toFixed(2)}</td>
+                    <td><strong>${p.estoque_atual}</strong></td>
+                    <td>${nomeFornecedor}</td>
+                    <td>
+                        <button class="btn btn-sm btn-stock" onclick="abrirModalEstoque(${p.id})">Estoque</button>
+                        <button class="btn btn-sm btn-edit" onclick="editarProduto(${p.id})">Editar</button>
+                        <button class="btn btn-sm btn-del" onclick="excluirProduto(${p.id})">Excluir</button>
+                    </td>
+                </tr>`;
             });
         }
 
-        async function cadastrarProduto(e) {
+        function filtrarProdutos(termo) {
+            const t = termo.toLowerCase().trim();
+            const filtrados = cacheProdutos.filter(p => 
+                p.nome.toLowerCase().includes(t) || 
+                (p.codigo && p.codigo.toLowerCase().includes(t))
+            );
+            renderTabelaProdutos(filtrados);
+        }
+
+        async function salvarProduto(e) {
             e.preventDefault();
+            const id = document.getElementById('prod_id').value;
             const payload = {
+                codigo: document.getElementById('prod_codigo').value,
                 nome: document.getElementById('prod_nome').value,
                 preco_custo: parseFloat(document.getElementById('prod_custo').value),
                 preco_venda: parseFloat(document.getElementById('prod_venda').value),
                 estoque_atual: parseInt(document.getElementById('prod_estoque').value),
                 fornecedor_id: document.getElementById('prod_fornecedor').value || null
             };
-            await fetch(`${API_URL}/produtos`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            document.getElementById('formProduto').reset();
-            carregarProdutos();
-            carregarRelatorioEstoque();
+
+            const url = id ? `${API_URL}/produtos/${id}` : `${API_URL}/produtos`;
+            const method = id ? 'PUT' : 'POST';
+
+            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (res.ok) {
+                resetFormProduto();
+                carregarProdutos();
+                carregarRelatorioEstoque();
+            } else {
+                alert('Erro ao salvar produto.');
+            }
         }
 
+        function editarProduto(id) {
+            const p = cacheProdutos.find(item => item.id === id);
+            if (!p) return;
+            document.getElementById('prod_id').value = p.id;
+            document.getElementById('prod_codigo').value = p.codigo || '';
+            document.getElementById('prod_nome').value = p.nome;
+            document.getElementById('prod_custo').value = p.preco_custo;
+            document.getElementById('prod_venda').value = p.preco_venda;
+            document.getElementById('prod_estoque').value = p.estoque_atual;
+            document.getElementById('prod_fornecedor').value = p.fornecedor_id || '';
+
+            document.getElementById('titleFormProduto').innerText = 'Editar Produto';
+            document.getElementById('btnSalvarProduto').innerText = 'Atualizar Produto';
+        }
+
+        function resetFormProduto() {
+            document.getElementById('formProduto').reset();
+            document.getElementById('prod_id').value = '';
+            document.getElementById('titleFormProduto').innerText = 'Cadastrar Produto';
+            document.getElementById('btnSalvarProduto').innerText = 'Salvar Produto';
+        }
+
+        async function excluirProduto(id) {
+            if (!confirm('Deseja realmente excluir este produto?')) return;
+            const res = await fetch(`${API_URL}/produtos/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                carregarProdutos();
+                carregarRelatorioEstoque();
+            } else {
+                alert('Erro ao excluir produto.');
+            }
+        }
+
+        /* --- MODAL DE ATUALIZAÇÃO RÁPIDA DE ESTOQUE --- */
+        function abrirModalEstoque(id) {
+            const p = cacheProdutos.find(item => item.id === id);
+            if (!p) return;
+
+            document.getElementById('modal_prod_id').value = p.id;
+            document.getElementById('modalNomeProduto').innerText = `Produto: ${p.nome} (Atual: ${p.estoque_atual})`;
+            document.getElementById('modal_qtd_ajuste').value = 1;
+            document.getElementById('modalEstoque').classList.add('active');
+        }
+
+        function fecharModalEstoque() {
+            document.getElementById('modalEstoque').classList.remove('active');
+        }
+
+        async function confirmarAjusteEstoque() {
+            const id = document.getElementById('modal_prod_id').value;
+            const p = cacheProdutos.find(item => item.id == id);
+            if (!p) return;
+
+            const tipo = document.getElementById('modal_tipo_ajuste').value;
+            const valor = parseInt(document.getElementById('modal_qtd_ajuste').value) || 0;
+            let novoEstoque = p.estoque_atual;
+
+            if (tipo === 'SOMAR') novoEstoque += valor;
+            else if (tipo === 'SUBTRAIR') novoEstoque -= valor;
+            else if (tipo === 'DEFINIR') novoEstoque = valor;
+
+            if (novoEstoque < 0) {
+                alert('O estoque resultante não pode ser negativo.');
+                return;
+            }
+
+            const payload = { ...p, estoque_atual: novoEstoque };
+
+            const res = await fetch(`${API_URL}/produtos/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                fecharModalEstoque();
+                carregarProdutos();
+                carregarRelatorioEstoque();
+            } else {
+                alert('Erro ao atualizar estoque.');
+            }
+        }
+
+        /* --- CONTAS PAGAR / RECEBER --- */
         async function carregarContas() {
             const res = await fetch(`${API_URL}/contas`);
             const dados = await res.json();
@@ -663,13 +853,14 @@
             carregarContas();
         }
 
+        /* --- VENDAS E RELATÓRIO --- */
         async function carregarSelectProdutos() {
             const res = await fetch(`${API_URL}/produtos`);
             cacheProdutos = await res.json();
             const selectVenda = document.getElementById('venda_produto');
             selectVenda.innerHTML = '<option value="">Selecione...</option>';
             cacheProdutos.forEach(p => {
-                selectVenda.innerHTML += `<option value="${p.id}">${p.nome} (R$ ${p.preco_venda.toFixed(2)}) - Estq: ${p.estoque_atual}</option>`;
+                selectVenda.innerHTML += `<option value="${p.id}">${p.nome} (R$ ${parseFloat(p.preco_venda).toFixed(2)}) - Estq: ${p.estoque_atual}</option>`;
             });
         }
 
@@ -715,7 +906,7 @@
             const tbody = document.querySelector('#tblEstoque tbody');
             tbody.innerHTML = '';
             dados.forEach(p => {
-                tbody.innerHTML += `<tr><td>${p.id}</td><td>${p.nome}</td><td><strong>${p.estoque_atual}</strong></td><td>R$ ${parseFloat(p.preco_venda).toFixed(2)}</td></tr>`;
+                tbody.innerHTML += `<tr><td>${p.codigo || p.id}</td><td>${p.nome}</td><td><strong>${p.estoque_atual}</strong></td><td>R$ ${parseFloat(p.preco_venda).toFixed(2)}</td></tr>`;
             });
         }
     </script>
