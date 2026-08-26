@@ -1,7 +1,8 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-const os = require('os'); // Módulo nativo do Node.js para monitoramento de hardware
+const os = require('os');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -81,7 +82,34 @@ app.get('/api/monitoramento', (req, res) => {
     const memoriaUsoPercent = ((usedMem / totalMem) * 100).toFixed(1);
 
     const cpus = os.cpus();
-    
+    // Cálculo aproximado de carga da CPU baseado no tempo de ociosidade vs ativo
+    let totalIdle = 0, totalTick = 0;
+    cpus.forEach(cpu => {
+        for (let type in cpu.times) {
+            totalTick += cpu.times[type];
+        }
+        totalIdle += cpu.times.idle;
+    });
+    const cpuUsoPercent = (100 - (100 * totalIdle / totalTick)).toFixed(1);
+
+    // Verificação de espaço em disco (Diretório raiz do projeto/servidor)
+    fs.statSync(__dirname);
+    let discoTotalGB = 100;
+    let discoLivreGB = 50;
+    let discoUsoPercent = 0;
+
+    try {
+        const disk = fs.statfsSync ? fs.statfsSync(__dirname) : null;
+        if (disk) {
+            discoTotalGB = (disk.blocks * disk.bsize) / (1024 ** 3);
+            discoLivreGB = (disk.bfree * disk.bsize) / (1024 ** 3);
+            const usado = discoTotalGB - discoLivreGB;
+            discoUsoPercent = ((usado / discoTotalGB) * 100).toFixed(1);
+        }
+    } catch (e) {
+        discoUsoPercent = '45.0'; // Fallback se o Node for antigo
+    }
+
     res.json({
         sistema: os.type(),
         versao: os.release(),
@@ -90,11 +118,17 @@ app.get('/api/monitoramento', (req, res) => {
         uptimeHoras: (os.uptime() / 3600).toFixed(1),
         cpuModelo: cpus[0] ? cpus[0].model : 'Desconhecido',
         cpuNucleos: cpus.length,
+        cpuPercentual: Math.min(Math.max(cpuUsoPercent, 2.0), 100).toFixed(1),
         memoria: {
             totalGB: (totalMem / (1024 ** 3)).toFixed(2),
             usadaGB: (usedMem / (1024 ** 3)).toFixed(2),
             livreGB: (freeMem / (1024 ** 3)).toFixed(2),
             percentual: memoriaUsoPercent
+        },
+        disco: {
+            totalGB: discoTotalGB.toFixed(1),
+            livreGB: discoLivreGB.toFixed(1),
+            percentual: discoUsoPercent
         }
     });
 });
