@@ -1,6 +1,7 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const os = require('os'); // Módulo nativo do Node.js para monitoramento de hardware
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -70,6 +71,32 @@ db.serialize(() => {
         FOREIGN KEY (cliente_id) REFERENCES clientes(id),
         FOREIGN KEY (produto_id) REFERENCES produtos(id)
     )`);
+});
+
+/* --- API MONITORAMENTO DO SISTEMA --- */
+app.get('/api/monitoramento', (req, res) => {
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const memoriaUsoPercent = ((usedMem / totalMem) * 100).toFixed(1);
+
+    const cpus = os.cpus();
+    
+    res.json({
+        sistema: os.type(),
+        versao: os.release(),
+        arquitetura: os.arch(),
+        hostname: os.hostname(),
+        uptimeHoras: (os.uptime() / 3600).toFixed(1),
+        cpuModelo: cpus[0] ? cpus[0].model : 'Desconhecido',
+        cpuNucleos: cpus.length,
+        memoria: {
+            totalGB: (totalMem / (1024 ** 3)).toFixed(2),
+            usadaGB: (usedMem / (1024 ** 3)).toFixed(2),
+            livreGB: (freeMem / (1024 ** 3)).toFixed(2),
+            percentual: memoriaUsoPercent
+        }
+    });
 });
 
 /* --- API CLIENTES --- */
@@ -199,7 +226,6 @@ app.post('/api/contas', (req, res) => {
     );
 });
 
-// Rota inteligente para quitar conta e atualizar a venda vinculada automaticamente
 app.patch('/api/contas/:id/pagar', (req, res) => {
     const { id } = req.params;
 
